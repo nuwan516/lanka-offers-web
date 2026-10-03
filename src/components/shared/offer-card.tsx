@@ -27,10 +27,15 @@ export function OfferCard({ offer, className }: OfferCardProps) {
   const expired = isExpired(offer.valid_to)
 
   return (
-    <Card className={cn('group relative gap-3 p-4 transition-shadow hover:shadow-md', className)}>
-      <div className="flex items-start justify-between gap-2">
+    <Card className={cn(
+      'group relative gap-3 overflow-hidden p-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-1',
+      className
+    )}>
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      
+      <div className="relative flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">{merchant}</p>
+          <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary transition-colors duration-200">{merchant}</p>
           {offer.bank && <BankBadge bankName={offer.bank} className="mt-1.5" />}
         </div>
         <Button
@@ -40,16 +45,17 @@ export function OfferCard({ offer, className }: OfferCardProps) {
             e.preventDefault()
             toggleSave(offer.id)
           }}
+          className="transition-all duration-200 hover:scale-110 active:scale-95"
           aria-label={saved ? t('offer.remove') : t('offer.save')}
         >
-          <Heart className={cn('size-4', saved && 'fill-current text-destructive')} />
+          <Heart className={cn('size-4 transition-all duration-200', saved && 'fill-current text-destructive')} />
         </Button>
       </div>
 
-      <Link to={`/offers/${offer.id}`} className="block">
+      <Link to={`/offers/${offer.id}`} className="relative block">
         {discount && (
           <div className="mb-2 flex items-center gap-2">
-            <span className="text-2xl font-bold tracking-tight text-foreground">
+            <span className="text-2xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors duration-200">
               {discount}
             </span>
             <span className="text-sm font-medium text-muted-foreground">
@@ -58,14 +64,14 @@ export function OfferCard({ offer, className }: OfferCardProps) {
           </div>
         )}
 
-        <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+        <p className="line-clamp-2 text-sm leading-snug text-muted-foreground group-hover:text-foreground transition-colors duration-200">
           {offer.title}
         </p>
       </Link>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+      <div className="relative flex flex-wrap items-center gap-x-3 gap-y-1.5">
         {offer.category && (
-          <Badge variant="secondary" className="text-[10px]">
+          <Badge variant="secondary" className="text-[10px] transition-colors duration-200 group-hover:bg-primary/10">
             {offer.category}
           </Badge>
         )}
@@ -81,7 +87,7 @@ export function OfferCard({ offer, className }: OfferCardProps) {
       </div>
 
       {endingSoon && (
-        <Badge variant="destructive" className="w-fit text-[10px]">
+        <Badge variant="destructive" className="relative w-fit text-[10px] animate-pulse">
           {t('offer.endingSoon')}
         </Badge>
       )}

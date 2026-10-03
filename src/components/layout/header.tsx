@@ -60,13 +60,13 @@ export function Header() {
 
         <form onSubmit={handleSearch} className="hidden flex-1 md:block md:max-w-xs lg:max-w-sm">
           <div className="relative">
-            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200" />
             <Input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('search.placeholder')}
-              className="pl-9"
+              className="pl-9 transition-all duration-200 focus:shadow-md focus:ring-2 focus:ring-primary/20"
               aria-label={t('search.placeholder')}
             />
           </div>
@@ -96,13 +96,13 @@ export function Header() {
           <div className="mx-auto max-w-7xl space-y-1 px-4 py-3">
             <form onSubmit={handleSearch}>
               <div className="relative">
-                <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground transition-colors duration-200" />
                 <Input
                   type="search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={t('search.placeholder')}
-                  className="pl-9"
+                  className="pl-9 transition-all duration-200 focus:shadow-md focus:ring-2 focus:ring-primary/20"
                   aria-label={t('search.placeholder')}
                 />
               </div>
