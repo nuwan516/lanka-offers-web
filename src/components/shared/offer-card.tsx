@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Calendar, Heart } from 'lucide-react'
+import { Calendar, Heart, MapPin } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -8,7 +8,7 @@ import { BankBadge } from '@/components/shared/bank-badge'
 import { LocationScopeBadge } from '@/components/shared/location-scope-badge'
 import { useI18n } from '@/i18n'
 import { useSavedOffers } from '@/hooks/use-saved-offers'
-import { formatDiscount, formatDate, isEndingSoon, isExpired, getMerchantName } from '@/lib/offers'
+import { formatDiscount, formatDate, formatDistance, isEndingSoon, isExpired, getMerchantName } from '@/lib/offers'
 import type { Offer } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -70,6 +70,12 @@ export function OfferCard({ offer, className }: OfferCardProps) {
       </Link>
 
       <div className="relative flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        {offer.distance_km !== undefined && offer.distance_km !== null && (
+          <Badge variant="outline" className="text-[10px] text-primary border-primary/30 flex items-center gap-1 font-medium bg-primary/5">
+            <MapPin className="size-2.5" />
+            {formatDistance(offer.distance_km)}
+          </Badge>
+        )}
         {offer.category && (
           <Badge variant="secondary" className="text-[10px] transition-colors duration-200 group-hover:bg-primary/10">
             {offer.category}

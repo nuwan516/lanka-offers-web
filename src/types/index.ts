@@ -43,6 +43,7 @@ export interface Offer {
   geo_locations?: GeoLocation[]
   db_status?: OfferStatus
   description?: string
+  distance_km?: number
   terms?: string
   image_url?: string
 }
