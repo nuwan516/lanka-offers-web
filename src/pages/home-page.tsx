@@ -29,19 +29,23 @@ export function HomePage() {
 
   const sortedByDiscount = sortOffers(offers, 'discount').slice(0, 8)
   const endingSoon = offers.filter((o) => isEndingSoon(o.valid_to)).slice(0, 4)
+  const featuredOffers = offers.filter((o) => o.discount_percentage && parseInt(String(o.discount_percentage)) >= 50).slice(0, 3)
   const bankList = banks.length > 0 ? banks : deriveBanksFromOffers(offers)
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 lg:py-10">
       {/* Hero */}
-      <section className="mb-8 space-y-4 lg:mb-12">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl lg:text-4xl">
-            {t('app.tagline')}
-          </h1>
-          <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-            {t('app.description')}
-          </p>
+      <section className="mb-8 space-y-6 lg:mb-12">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-8 lg:p-12">
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background" />
+          <div className="relative space-y-4">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+              {t('app.tagline')}
+            </h1>
+            <p className="max-w-2xl text-base text-muted-foreground sm:text-lg">
+              {t('app.description')}
+            </p>
+          </div>
         </div>
 
         <form onSubmit={handleSearch} className="flex max-w-2xl gap-2">
@@ -52,11 +56,11 @@ export function HomePage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('search.placeholder')}
-              className="h-11 pl-9"
+              className="h-12 pl-9 text-base shadow-sm transition-shadow focus:shadow-md"
               aria-label={t('search.placeholder')}
             />
           </div>
-          <Button type="submit" size="lg">
+          <Button type="submit" size="lg" className="h-12 px-6 text-base shadow-sm transition-shadow hover:shadow-md">
             {t('search.button')}
           </Button>
         </form>
@@ -71,10 +75,30 @@ export function HomePage() {
               <Link
                 key={bank.code || bank.name}
                 to={`/explore?bank=${encodeURIComponent(bank.code || bank.name)}`}
-                className="rounded-lg border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+                className="rounded-full border bg-card px-4 py-2 text-sm font-medium text-foreground transition-all duration-200 hover:border-primary hover:bg-primary/10 hover:shadow-sm active:scale-95"
               >
                 {bank.name}
               </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Featured offers */}
+      {featuredOffers.length > 0 && (
+        <section className="mb-8 lg:mb-10">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold tracking-tight">{t('offer.featured')}</h2>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/explore">
+                {t('common.viewAll')}
+                <ArrowRight className="size-3.5" />
+              </Link>
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {featuredOffers.map((offer) => (
+              <OfferCard key={offer.id} offer={offer} className="border-primary/50" />
             ))}
           </div>
         </section>
