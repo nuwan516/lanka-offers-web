@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom'
+'use client'
+
+import Link from 'next/link'
 import { Calendar, Heart, MapPin } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
@@ -52,7 +54,7 @@ export function OfferCard({ offer, className }: OfferCardProps) {
         </Button>
       </div>
 
-      <Link to={`/offers/${offer.id}`} className="relative block">
+      <Link href={`/offers/${offer.id}`} className="relative block">
         {discount && (
           <div className="mb-2 flex items-center gap-2">
             <span className="text-2xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors duration-200">

@@ -1,5 +1,6 @@
-import { Link } from 'react-router-dom'
+'use client'
 
+import Link from 'next/link'
 import { useI18n } from '@/i18n'
 
 export function Footer() {
@@ -17,16 +18,16 @@ export function Footer() {
           </div>
 
           <nav className="flex flex-col gap-2 text-sm">
-            <Link to="/explore" className="text-muted-foreground hover:text-foreground">
+            <Link href="/explore" className="text-muted-foreground hover:text-foreground">
               {t('nav.explore')}
             </Link>
-            <Link to="/merchants" className="text-muted-foreground hover:text-foreground">
+            <Link href="/merchants" className="text-muted-foreground hover:text-foreground">
               {t('nav.merchants')}
             </Link>
-            <Link to="/nearby" className="text-muted-foreground hover:text-foreground">
+            <Link href="/nearby" className="text-muted-foreground hover:text-foreground">
               {t('nav.nearby')}
             </Link>
-            <Link to="/saved" className="text-muted-foreground hover:text-foreground">
+            <Link href="/saved" className="text-muted-foreground hover:text-foreground">
               {t('nav.saved')}
             </Link>
           </nav>

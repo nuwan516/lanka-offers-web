@@ -13,6 +13,8 @@ node_modules/
 # Production build artifacts
 dist/
 dist-ssr/
+.next/
+*.tsbuildinfo
 *.local
 
 # Environment variables & secrets

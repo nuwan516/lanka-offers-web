@@ -1,4 +1,7 @@
-import { Link, useParams } from 'react-router-dom'
+'use client'
+
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import { Search, ArrowLeft, ChevronRight, Store } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
@@ -85,7 +88,7 @@ function MerchantCard({ merchant }: { merchant: Merchant }) {
   const slug = merchant.canonical_merchant || merchant.name
 
   return (
-    <Link to={`/merchants/${encodeURIComponent(slug)}`}>
+    <Link href={`/merchants/${encodeURIComponent(slug)}`}>
       <Card className="group flex items-center gap-3 p-4 transition-shadow hover:shadow-md">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
           <Store className="size-5 text-muted-foreground" />
@@ -107,8 +110,9 @@ function MerchantCard({ merchant }: { merchant: Merchant }) {
   )
 }
 
-export function MerchantDetailPage() {
-  const { merchant } = useParams<{ merchant: string }>()
+export function MerchantDetailPage({ params }: { params?: { merchant?: string } }) {
+  const routerParams = useParams<{ merchant?: string }>()
+  const merchant = params?.merchant ?? routerParams?.merchant
   const { t } = useI18n()
   const decoded = decodeURIComponent(merchant || '')
 
@@ -128,7 +132,7 @@ export function MerchantDetailPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
       <Button variant="ghost" size="sm" asChild className="mb-4">
-        <Link to="/merchants">
+        <Link href="/merchants">
           <ArrowLeft className="size-4" />
           {t('nav.merchants')}
         </Link>

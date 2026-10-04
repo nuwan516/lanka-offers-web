@@ -1,4 +1,6 @@
-import { useSearchParams } from 'react-router-dom'
+'use client'
+
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { SlidersHorizontal, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
@@ -17,14 +19,16 @@ import { filterOffers, sortOffers, deriveCategories, deriveCardTypes } from '@/l
 
 export function ExplorePage() {
   const { t } = useI18n()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [sheetOpen, setSheetOpen] = useState(false)
 
-  const bank = searchParams.get('bank') || ''
-  const search = searchParams.get('search') || ''
-  const category = searchParams.get('category') || ''
-  const cardType = searchParams.get('cardType') || ''
-  const sortBy = searchParams.get('sortBy') || 'newest'
+  const bank = searchParams?.get('bank') || ''
+  const search = searchParams?.get('search') || ''
+  const category = searchParams?.get('category') || ''
+  const cardType = searchParams?.get('cardType') || ''
+  const sortBy = searchParams?.get('sortBy') || 'newest'
 
   const { offers, loading, error, refetch } = useOffers({ status: 'active', limit: 200 })
   const { banks } = useReferenceData()
@@ -39,14 +43,16 @@ export function ExplorePage() {
   }, [offers, bank, category, cardType, search, sortBy])
 
   const updateParam = (key: string, value: string) => {
-    const next = new URLSearchParams(searchParams)
+    const next = new URLSearchParams(searchParams ? searchParams.toString() : '')
     if (value) next.set(key, value)
     else next.delete(key)
-    setSearchParams(next)
+    const qs = next.toString()
+    const currentPath = pathname || '/explore'
+    router.push(qs ? `${currentPath}?${qs}` : currentPath)
   }
 
   const clearFilters = () => {
-    setSearchParams(new URLSearchParams())
+    router.push(pathname || '/explore')
   }
 
   const hasActiveFilters = bank || search || category || cardType
@@ -79,7 +85,9 @@ export function ExplorePage() {
           <SelectContent>
             <SelectItem value="all">{t('filters.allCategories')}</SelectItem>
             {categories.map((c) => (
-              <SelectItem key={c} value={c}>{c}</SelectItem>
+              <SelectItem key={c} value={c}>
+                {c}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -93,30 +101,18 @@ export function ExplorePage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t('filters.allCardTypes')}</SelectItem>
-            {cardTypes.map((c) => (
-              <SelectItem key={c} value={c}>{c}</SelectItem>
+            {cardTypes.map((ct) => (
+              <SelectItem key={ct} value={ct}>
+                {ct}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">{t('filters.sortBy')}</label>
-        <Select value={sortBy} onValueChange={(v) => updateParam('sortBy', v)}>
-          <SelectTrigger className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="newest">{t('filters.sort.newest')}</SelectItem>
-            <SelectItem value="endingSoon">{t('filters.sort.endingSoon')}</SelectItem>
-            <SelectItem value="discount">{t('filters.sort.discount')}</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
       {hasActiveFilters && (
-        <Button variant="outline" className="w-full" onClick={clearFilters}>
-          <X className="size-4" />
+        <Button variant="outline" size="sm" onClick={clearFilters} className="w-full">
+          <X className="size-3.5" />
           {t('filters.clear')}
         </Button>
       )}
@@ -124,47 +120,68 @@ export function ExplorePage() {
   )
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 lg:py-8">
-      <div className="flex flex-col gap-4 lg:flex-row">
+    <div className="mx-auto max-w-7xl px-4 py-6">
+      {/* Header */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('nav.explore')}</h1>
+          <p className="text-sm text-muted-foreground">
+            {t('explore.showing', { count: filtered.length, total: offers.length })}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Mobile filter toggle */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 lg:hidden"
+            onClick={() => setSheetOpen(true)}
+          >
+            <SlidersHorizontal className="size-4" />
+            {t('filters.title')}
+            {hasActiveFilters && (
+              <span className="flex size-2 rounded-full bg-primary" />
+            )}
+          </Button>
+
+          {/* Sort */}
+          <Select value={sortBy} onValueChange={(v) => updateParam('sortBy', v)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">{t('sort.newest')}</SelectItem>
+              <SelectItem value="discount">{t('sort.discount')}</SelectItem>
+              <SelectItem value="endingSoon">{t('sort.endingSoon')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="mb-6 max-w-md">
+        <SearchInput
+          value={search}
+          onChange={(v) => updateParam('search', v)}
+          placeholder={t('search.placeholder')}
+        />
+      </div>
+
+      {/* Main layout */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
         {/* Desktop sidebar */}
-        <aside className="hidden w-64 shrink-0 lg:block">
-          <div className="sticky top-20 rounded-lg border bg-card p-4">
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold">
-              <SlidersHorizontal className="size-4" />
-              {t('filters.title')}
-            </h2>
+        <aside className="hidden lg:block">
+          <div className="sticky top-20 space-y-6 rounded-lg border bg-card p-5">
+            <h2 className="text-base font-semibold">{t('filters.title')}</h2>
             <FilterContent />
           </div>
         </aside>
 
-        {/* Main content */}
-        <div className="flex-1 space-y-4">
-          <div className="flex items-center gap-2">
-            <SearchInput value={search} onChange={(v) => updateParam('search', v)} />
-            <Button
-              variant="outline"
-              size="icon"
-              className="lg:hidden"
-              onClick={() => setSheetOpen(true)}
-              aria-label={t('filters.title')}
-            >
-              <SlidersHorizontal className="size-4" />
-            </Button>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {t('search.results', { count: filtered.length })}
-            </p>
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="lg:hidden">
-                {t('filters.clear')}
-              </Button>
-            )}
-          </div>
-
+        {/* Offers grid */}
+        <div className="lg:col-span-3">
           {loading ? (
-            <OfferGridSkeleton />
+            <OfferGridSkeleton count={9} />
           ) : error ? (
             <ErrorState onRetry={refetch} />
           ) : filtered.length === 0 ? (
