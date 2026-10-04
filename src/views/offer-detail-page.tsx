@@ -1,4 +1,7 @@
-import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
+'use client'
+
+import Link from 'next/link'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Heart, ExternalLink, Calendar, CreditCard, MapPin, FileText, ChevronRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -12,16 +15,16 @@ import { BankBadge } from '@/components/shared/bank-badge'
 import { LocationScopeBadge } from '@/components/shared/location-scope-badge'
 import { useI18n } from '@/i18n'
 import { useSavedOffers } from '@/hooks/use-saved-offers'
-import { fetchOffer } from '@/services/api/offers'
-import { fetchOffers } from '@/services/api/offers'
+import { fetchOffer, fetchOffers } from '@/services/api/offers'
 import { formatDiscount, formatDate, getMerchantName, isValidUrl, getValidGeoLocations } from '@/lib/offers'
 import type { Offer, OfferDetail } from '@/types'
 
-export function OfferDetailPage() {
-  const { id } = useParams<{ id: string }>()
+export function OfferDetailPage({ params }: { params?: { id?: string } }) {
+  const routerParams = useParams<{ id?: string }>()
+  const id = params?.id ?? routerParams?.id
   const { t, lang } = useI18n()
-  const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const { isSaved, toggleSave } = useSavedOffers()
 
   const [offer, setOffer] = useState<OfferDetail | null>(null)
@@ -48,8 +51,8 @@ export function OfferDetailPage() {
       })
 
     // Load sibling offers for prev/next navigation
-    const bank = searchParams.get('bank')
-    const search = searchParams.get('search')
+    const bank = searchParams?.get('bank')
+    const search = searchParams?.get('search')
     fetchOffers({ status: 'active', limit: 200, bank: bank || undefined, search: search || undefined })
       .then((data) => {
         if (cancelled) return
@@ -77,7 +80,7 @@ export function OfferDetailPage() {
         <ErrorState
           title={t('offer.notFound')}
           hint={t('offer.notFoundHint')}
-          onRetry={() => navigate('/explore')}
+          onRetry={() => router.push('/explore')}
         />
       </div>
     )
@@ -98,7 +101,7 @@ export function OfferDetailPage() {
     <div className="mx-auto max-w-3xl px-4 py-6">
       {/* Breadcrumb */}
       <nav className="mb-4 flex items-center gap-1.5 text-sm text-muted-foreground">
-        <Link to="/explore" className="hover:text-foreground">{t('nav.explore')}</Link>
+        <Link href="/explore" className="hover:text-foreground">{t('nav.explore')}</Link>
         <ChevronRight className="size-3" />
         <span className="truncate text-foreground">{merchant}</span>
       </nav>
@@ -151,100 +154,61 @@ export function OfferDetailPage() {
       {/* Description */}
       {offer.description && (
         <Card className="mb-4 p-4">
-          <p className="text-sm leading-relaxed text-foreground">{offer.description}</p>
+          <h2 className="mb-2 text-sm font-semibold">{t('offer.description')}</h2>
+          <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+            {offer.description}
+          </p>
         </Card>
       )}
 
       {/* Card eligibility */}
-      <Card className="mb-4 p-4">
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-          <CreditCard className="size-4" />
-          {t('offer.cardEligibility')}
-        </h2>
-        <Separator className="mb-3" />
-        {eligibility ? (
-          <div className="space-y-3 text-sm">
-            {eligibility.cardTypes && eligibility.cardTypes.length > 0 && (
-              <div>
-                <p className="text-muted-foreground">{t('offer.eligibleCards')}</p>
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  {eligibility.cardTypes.map((ct, i) => (
-                    <Badge key={i} variant="outline">{ct}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-            {eligibility.networks && eligibility.networks.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {eligibility.networks.map((nw, i) => (
-                  <Badge key={i} variant="secondary">{nw}</Badge>
-                ))}
-              </div>
-            )}
-            {eligibility.includedCards && eligibility.includedCards.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {eligibility.includedCards.map((c, i) => (
-                  <Badge key={i} variant="outline">{c}</Badge>
-                ))}
-              </div>
-            )}
-            {eligibility.excludedCards && eligibility.excludedCards.length > 0 && (
-              <div>
-                <p className="text-muted-foreground">{t('offer.notValidFor')}</p>
-                <p className="mt-1 text-destructive">
-                  {eligibility.excludedCards.join(', ')}
-                </p>
-              </div>
-            )}
-            {eligibility.restrictions && eligibility.restrictions.length > 0 && (
-              <div>
-                <p className="text-muted-foreground">{t('offer.restrictions')}</p>
-                <ul className="mt-1 list-disc space-y-1 pl-4">
-                  {eligibility.restrictions.map((r, i) => (
-                    <li key={i}>{r}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {(!eligibility.cardTypes || eligibility.cardTypes.length === 0) &&
-              (!eligibility.networks || eligibility.networks.length === 0) &&
-              (!eligibility.includedCards || eligibility.includedCards.length === 0) && (
-              <p className="text-muted-foreground">{t('offer.eligibilityIncomplete')}</p>
-            )}
+      {eligibility && (
+        <Card className="mb-4 p-4">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+            <CreditCard className="size-4" />
+            {t('offer.eligibleCards')}
+          </h2>
+          <div className="flex flex-wrap gap-1.5">
+            {eligibility.cardTypes?.map((ct) => (
+              <Badge key={ct} variant="outline" className="text-xs capitalize">{ct}</Badge>
+            ))}
+            {eligibility.networks?.map((n) => (
+              <Badge key={n} variant="outline" className="text-xs uppercase">{n}</Badge>
+            ))}
+            {eligibility.includedCards?.map((card) => (
+              <Badge key={card} variant="outline" className="text-xs">{card}</Badge>
+            ))}
           </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">{t('offer.eligibilityIncomplete')}</p>
-        )}
-      </Card>
+        </Card>
+      )}
 
-      {/* Where it applies */}
-      {offer.location_scope && (
+      {/* Locations */}
+      {geoLocations.length > 0 && (
         <Card className="mb-4 p-4">
           <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
             <MapPin className="size-4" />
-            {t('offer.whereApplies')}
+            {t('offer.branches', { count: geoLocations.length })}
           </h2>
-          <Separator className="mb-3" />
-          <LocationScopeBadge scope={offer.location_scope} />
-          {geoLocations.length > 0 && (
-            <div className="mt-3 space-y-2">
-              {geoLocations.map((loc, i) => (
-                <div key={i} className="text-sm">
-                  {loc.name && <p className="font-medium">{loc.name}</p>}
-                  {loc.address && <p className="text-muted-foreground">{loc.address}</p>}
-                  <a
-                    href={`https://www.openstreetmap.org/?mlat=${loc.lat}&mlon=${loc.lng}#map=16/${loc.lat}/${loc.lng}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                  >
-                    <MapPin className="size-3" />
-                    {loc.lat.toFixed(4)}, {loc.lng.toFixed(4)}
-                  </a>
+          <div className="space-y-2">
+            {geoLocations.map((loc, i) => (
+              <div key={i} className="flex items-start justify-between gap-2 rounded-md bg-muted/40 p-2.5 text-xs">
+                <div>
+                  <p className="font-medium">{loc.name || loc.address || merchant}</p>
+                  {loc.name && loc.address && (
+                    <p className="text-muted-foreground">{loc.address}</p>
+                  )}
                 </div>
-              ))}
-            </div>
-          )}
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 text-primary hover:underline"
+                >
+                  {t('offer.viewMap')}
+                </a>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
 
@@ -279,7 +243,12 @@ export function OfferDetailPage() {
             variant="ghost"
             size="sm"
             disabled={!prevOffer}
-            onClick={() => prevOffer && navigate(`/offers/${prevOffer.id}?${searchParams.toString()}`)}
+            onClick={() => {
+              if (prevOffer) {
+                const qs = searchParams?.toString()
+                router.push(`/offers/${prevOffer.id}${qs ? `?${qs}` : ''}`)
+              }
+            }}
           >
             <ArrowLeft className="size-4" />
             {t('offer.previous')}
@@ -288,7 +257,12 @@ export function OfferDetailPage() {
             variant="ghost"
             size="sm"
             disabled={!nextOffer}
-            onClick={() => nextOffer && navigate(`/offers/${nextOffer.id}?${searchParams.toString()}`)}
+            onClick={() => {
+              if (nextOffer) {
+                const qs = searchParams?.toString()
+                router.push(`/offers/${nextOffer.id}${qs ? `?${qs}` : ''}`)
+              }
+            }}
           >
             {t('offer.next')}
             <ArrowRight className="size-4" />

@@ -1,3 +1,5 @@
+'use client'
+
 import * as React from 'react'
 
 import en from '@/i18n/en.json'
@@ -29,17 +31,23 @@ function interpolate(str: string, vars?: Record<string, string | number>): strin
 }
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = React.useState<Language>(detectInitialLang)
+  const [lang, setLangState] = React.useState<Language>('en')
+
+  React.useEffect(() => {
+    const initial = detectInitialLang()
+    setLangState(initial)
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = initial
+    }
+  }, [])
 
   const setLang = React.useCallback((next: Language) => {
     persistLanguage(next)
     setLangState(next)
-    document.documentElement.lang = next
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = next
+    }
   }, [])
-
-  React.useEffect(() => {
-    document.documentElement.lang = lang
-  }, [lang])
 
   const t = React.useCallback(
     (key: string, vars?: Record<string, string | number>) => {

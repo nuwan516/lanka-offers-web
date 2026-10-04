@@ -1,5 +1,9 @@
+'use client'
+
 import { MapPin, List, Map as MapIcon, Crosshair, Search } from 'lucide-react'
-import { useState, useEffect, Suspense, lazy } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import dynamic from 'next/dynamic'
+import Link from 'next/link'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -19,8 +23,9 @@ import {
 } from '@/lib/offers'
 import type { Offer } from '@/types'
 
-const OfferMap = lazy(() =>
-  import('@/components/shared/offer-map').then((m) => ({ default: m.OfferMap }))
+const OfferMap = dynamic(
+  () => import('@/components/shared/offer-map').then((m) => m.OfferMap),
+  { ssr: false }
 )
 
 const PRESET_CITIES = [
@@ -277,7 +282,7 @@ function NearbyOfferRow({ offer }: { offer: Offer }) {
           </Badge>
         )}
         <Button variant="outline" size="sm" asChild className="h-7 text-xs">
-          <a href={`/offers/${offer.id}`}>{t('offer.viewOffer')}</a>
+          <Link href={`/offers/${offer.id}`}>{t('offer.viewOffer')}</Link>
         </Button>
       </div>
     </Card>

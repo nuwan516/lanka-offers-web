@@ -1,4 +1,7 @@
+'use client'
+
 import { useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 
 import { OfferCard } from '@/components/shared/offer-card'
 import { OfferGridSkeleton } from '@/components/shared/skeletons'
@@ -10,6 +13,7 @@ import { useOffers } from '@/hooks/use-offers'
 
 export function SavedPage() {
   const { t } = useI18n()
+  const router = useRouter()
   const { savedIds } = useSavedOffers()
   const { offers, loading, error, refetch } = useOffers({ status: 'active', limit: 200 })
 
@@ -43,7 +47,7 @@ export function SavedPage() {
           title={t('saved.empty')}
           hint={t('saved.emptyHint')}
           actionLabel={t('saved.explore')}
-          onAction={() => (window.location.href = '/explore')}
+          onAction={() => router.push('/explore')}
         />
       </div>
     )

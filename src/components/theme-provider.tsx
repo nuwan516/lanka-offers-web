@@ -1,3 +1,5 @@
+'use client'
+
 /* eslint-disable react-refresh/only-export-components */
 import * as React from "react"
 
@@ -32,6 +34,7 @@ function isTheme(value: string | null): value is Theme {
 }
 
 function getSystemTheme(): ResolvedTheme {
+  if (typeof window === "undefined") return "light"
   if (window.matchMedia(COLOR_SCHEME_QUERY).matches) {
     return "dark"
   }
@@ -40,6 +43,7 @@ function getSystemTheme(): ResolvedTheme {
 }
 
 function disableTransitionsTemporarily() {
+  if (typeof document === "undefined") return () => {}
   const style = document.createElement("style")
   style.appendChild(
     document.createTextNode(
@@ -85,6 +89,7 @@ export function ThemeProvider({
   ...props
 }: ThemeProviderProps) {
   const [theme, setThemeState] = React.useState<Theme>(() => {
+    if (typeof window === "undefined") return defaultTheme
     const storedTheme = localStorage.getItem(storageKey)
     if (isTheme(storedTheme)) {
       return storedTheme

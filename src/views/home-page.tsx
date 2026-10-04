@@ -1,4 +1,7 @@
-import { Link, useNavigate } from 'react-router-dom'
+'use client'
+
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ArrowRight, Search } from 'lucide-react'
 import { useState } from 'react'
 
@@ -14,7 +17,7 @@ import { sortOffers, isEndingSoon } from '@/lib/offers'
 
 export function HomePage() {
   const { t } = useI18n()
-  const navigate = useNavigate()
+  const router = useRouter()
   const [search, setSearch] = useState('')
 
   const { offers, loading, error, refetch } = useOffers({ status: 'active', limit: 200 })
@@ -23,7 +26,7 @@ export function HomePage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (search.trim()) {
-      navigate(`/explore?search=${encodeURIComponent(search.trim())}`)
+      router.push(`/explore?search=${encodeURIComponent(search.trim())}`)
     }
   }
 
@@ -60,7 +63,7 @@ export function HomePage() {
               aria-label={t('search.placeholder')}
             />
           </div>
-          <Button type="submit" size="lg" className="h-12 px-6 text-base shadow-sm transition-shadow hover:shadow-md">
+          <Button type="submit" size="lg" className="h-12 px-6">
             {t('search.button')}
           </Button>
         </form>
@@ -74,7 +77,7 @@ export function HomePage() {
             {bankList.slice(0, 12).map((bank) => (
               <Link
                 key={bank.code || bank.name}
-                to={`/explore?bank=${encodeURIComponent(bank.code || bank.name)}`}
+                href={`/explore?bank=${encodeURIComponent(bank.code || bank.name)}`}
                 className="rounded-full border bg-card px-4 py-2 text-sm font-medium text-foreground transition-all duration-200 hover:border-primary hover:bg-primary/10 hover:shadow-sm active:scale-95"
               >
                 {bank.name}
@@ -90,7 +93,7 @@ export function HomePage() {
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold tracking-tight">{t('offer.featured')}</h2>
             <Button variant="ghost" size="sm" asChild>
-              <Link to="/explore">
+              <Link href="/explore">
                 {t('common.viewAll')}
                 <ArrowRight className="size-3.5" />
               </Link>
@@ -109,7 +112,7 @@ export function HomePage() {
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold tracking-tight">{t('offer.benefit')}</h2>
           <Button variant="ghost" size="sm" asChild>
-            <Link to="/explore">
+            <Link href="/explore">
               {t('common.viewAll')}
               <ArrowRight className="size-3.5" />
             </Link>
