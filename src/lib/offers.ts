@@ -36,13 +36,20 @@ export function isExpired(validTo?: string): boolean {
   return date.getTime() < Date.now()
 }
 
-const PHYSICAL_SCOPES: LocationScope[] = ['EXPLICIT_BRANCH', 'MULTIPLE_BRANCHES', 'DISTRICT_REGION']
+const PHYSICAL_SCOPES: LocationScope[] = [
+  'EXPLICIT_BRANCH',
+  'MULTIPLE_BRANCHES',
+  'SELECTED_OUTLETS',
+  'DISTRICT_REGION',
+  'NATIONWIDE',
+]
 
 export function hasPhysicalLocations(offer: Offer): boolean {
-  const scope = offer.location_scope
-  if (scope && PHYSICAL_SCOPES.includes(scope)) {
-    return !!(offer.geo_locations && offer.geo_locations.length > 0)
-  }
+  if (offer.location_scope === 'ONLINE') return false
+  const validGeos = getValidGeoLocations(offer)
+  if (validGeos.length > 0) return true
+  if (offer.merchant_location && offer.merchant_location.trim().length > 0) return true
+  if (offer.location_scope && PHYSICAL_SCOPES.includes(offer.location_scope)) return true
   return false
 }
 
@@ -53,6 +60,70 @@ export function getValidGeoLocations(offer: Offer): NonNullable<Offer['geo_locat
       typeof loc.lat === 'number' && typeof loc.lng === 'number' && !isNaN(loc.lat) && !isNaN(loc.lng)
   )
 }
+
+export function extractPhoneNumbers(text?: string): string[] {
+  if (!text) return []
+  const phoneRegex = /(?:\+94|0)(?:7[0-8]|11|2[1-8]|3[1-8]|4[1-7]|5[1-7]|6[3-7]|81|91)\s?\d{3}\s?\d{4}|\b(?:07\d{8}|011\d{7}|0[2-9]\d{7,8})\b/g
+  const matches = text.match(phoneRegex) || []
+  return Array.from(new Set(matches.map((p) => p.trim())))
+}
+
+export function cleanLocationText(text?: string): string {
+  if (!text) return ''
+  return text
+    .replace(/,\s*Sri\s*Lanka/gi, '')
+    .replace(/\s*-\s*Contact\s*No\s*:.*$/gi, '')
+    .replace(/\s*Tel\s*:.*$/gi, '')
+    .trim()
+}
+
+export function getConciseLocationLabel(offer: Offer): { text: string; isOnline: boolean; isNationwide: boolean } | null {
+  if (offer.location_scope === 'ONLINE') {
+    return { text: 'Online', isOnline: true, isNationwide: false }
+  }
+  if (offer.location_scope === 'NATIONWIDE') {
+    return { text: 'Islandwide', isOnline: false, isNationwide: true }
+  }
+
+  const validGeos = getValidGeoLocations(offer)
+  if (validGeos.length > 0) {
+    const first = validGeos[0]
+    const cityName = first.city || first.district || cleanLocationText(first.name || first.address)
+    if (cityName) {
+      if (validGeos.length > 1) {
+        return { text: `${cityName.split(',')[0].slice(0, 16)} +${validGeos.length - 1}`, isOnline: false, isNationwide: false }
+      }
+      return { text: cityName.split(',')[0].slice(0, 20), isOnline: false, isNationwide: false }
+    }
+  }
+
+  if (offer.merchant_location) {
+    const cleaned = cleanLocationText(offer.merchant_location)
+    if (cleaned) {
+      const parts = cleaned.split(/[,;\n|]/).map((s) => s.trim()).filter(Boolean)
+      if (parts.length > 0) {
+        const primary = parts[0]
+        if (parts.length > 1) {
+          return { text: `${primary.slice(0, 16)} +${parts.length - 1}`, isOnline: false, isNationwide: false }
+        }
+        return { text: primary.slice(0, 22), isOnline: false, isNationwide: false }
+      }
+    }
+  }
+
+  if (offer.location_scope === 'MULTIPLE_BRANCHES') {
+    return { text: 'Multiple Branches', isOnline: false, isNationwide: false }
+  }
+  if (offer.location_scope === 'SELECTED_OUTLETS') {
+    return { text: 'Selected Outlets', isOnline: false, isNationwide: false }
+  }
+  if (offer.location_scope === 'EXPLICIT_BRANCH') {
+    return { text: 'Branch', isOnline: false, isNationwide: false }
+  }
+
+  return null
+}
+
 
 export function haversineDistance(
   lat1: number,

@@ -5,8 +5,16 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 import type { Offer } from '@/types'
-import { getValidGeoLocations, getMerchantName, formatDiscount, haversineDistance, formatDistance } from '@/lib/offers'
+import {
+  getValidGeoLocations,
+  getMerchantName,
+  formatDiscount,
+  haversineDistance,
+  formatDistance,
+  cleanLocationText,
+} from '@/lib/offers'
 import { useI18n } from '@/i18n'
+
 
 import { env } from '@/config/env'
 
@@ -73,16 +81,19 @@ export function OfferMap({ offers, userLocation, className, selectedOfferId, onS
           distanceStr = formatDistance(dist)
         }
 
+        const addressStr = loc.address || loc.name || offer.merchant_location || ''
         const popupHtml = `
-          <div style="min-width: 180px; padding: 4px;">
-            <p style="font-weight: 600; margin: 0 0 4px; font-size: 13px;">${escapeHtml(merchant)}</p>
-            ${discount ? `<p style="margin: 0 0 2px; font-size: 13px; color: #555;">${discount} ${t('offer.discountOff')}</p>` : ''}
-            <p style="margin: 0 0 4px; font-size: 12px; color: #888;">${escapeHtml(offer.bank || '')}</p>
-            ${distanceStr ? `<p style="margin: 0 0 6px; font-size: 12px; color: #666;">${t('nearby.distance', { distance: distanceStr })}</p>` : ''}
-            <a href="/offers/${offer.id}" style="display: inline-block; padding: 4px 10px; background: #333; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;">${t('offer.viewOffer')}</a>
+          <div style="min-width: 200px; padding: 6px; font-family: inherit;">
+            <p style="font-weight: 600; margin: 0 0 3px; font-size: 13px; color: #0f172a;">${escapeHtml(merchant)}</p>
+            ${discount ? `<p style="margin: 0 0 3px; font-size: 12px; font-weight: 600; color: #2563eb;">${discount} ${t('offer.discountOff')}</p>` : ''}
+            <p style="margin: 0 0 4px; font-size: 11px; color: #64748b; line-height: 1.3;">${escapeHtml(offer.title)}</p>
+            ${addressStr ? `<p style="margin: 0 0 5px; font-size: 11px; color: #475569; display: flex; align-items: center; gap: 3px;">📍 ${escapeHtml(cleanLocationText(addressStr))}</p>` : ''}
+            ${distanceStr ? `<p style="margin: 0 0 6px; font-size: 11px; font-weight: 600; color: #059669;">${t('nearby.distance', { distance: distanceStr })}</p>` : ''}
+            <a href="/offers/${offer.id}" style="display: block; text-align: center; padding: 5px 10px; background: #0f172a; color: white; text-decoration: none; border-radius: 6px; font-size: 11px; font-weight: 500;">${t('offer.viewOffer')}</a>
           </div>
         `
         marker.bindPopup(popupHtml)
+
         marker.on('click', () => onSelectOffer?.(offer.id))
         marker.addTo(map)
         markersRef.current.push(marker)

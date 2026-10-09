@@ -11,6 +11,10 @@ export interface GeoLocation {
   lng: number
   name?: string
   address?: string
+  district?: string
+  city?: string
+  placeId?: string
+  confidence?: number
 }
 
 export type LocationScope =
@@ -34,6 +38,7 @@ export interface Offer {
   category?: string
   card_type?: string
   merchant_name?: string
+  merchant_location?: string
   canonical_merchant?: string
   location_scope?: LocationScope
   discount_percentage?: number | string
@@ -41,6 +46,7 @@ export interface Offer {
   valid_to?: string
   card_eligibility?: CardEligibility
   geo_locations?: GeoLocation[]
+  geo_status?: string
   db_status?: OfferStatus
   description?: string
   distance_km?: number
@@ -59,8 +65,11 @@ export interface OfferDetail extends Offer {
 export interface Merchant {
   name: string
   canonical_merchant?: string
+  category?: string | null
   offer_count?: number
   bank_count?: number
+  banks?: string[]
+  aliases?: string[]
   observed_names?: string[]
   observed_scopes?: string[]
 }

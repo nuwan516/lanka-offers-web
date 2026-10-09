@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Calendar, Heart, MapPin } from 'lucide-react'
+import { Calendar, Heart, MapPin, Globe } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -10,7 +10,15 @@ import { BankBadge } from '@/components/shared/bank-badge'
 import { LocationScopeBadge } from '@/components/shared/location-scope-badge'
 import { useI18n } from '@/i18n'
 import { useSavedOffers } from '@/hooks/use-saved-offers'
-import { formatDiscount, formatDate, formatDistance, isEndingSoon, isExpired, getMerchantName } from '@/lib/offers'
+import {
+  formatDiscount,
+  formatDate,
+  formatDistance,
+  isEndingSoon,
+  isExpired,
+  getMerchantName,
+  getConciseLocationLabel,
+} from '@/lib/offers'
 import type { Offer } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -27,6 +35,8 @@ export function OfferCard({ offer, className }: OfferCardProps) {
   const discount = formatDiscount(offer.discount_percentage)
   const endingSoon = isEndingSoon(offer.valid_to)
   const expired = isExpired(offer.valid_to)
+  const locationLabel = getConciseLocationLabel(offer)
+
 
   return (
     <Card className={cn(
@@ -72,18 +82,23 @@ export function OfferCard({ offer, className }: OfferCardProps) {
       </Link>
 
       <div className="relative flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        {offer.distance_km !== undefined && offer.distance_km !== null && (
+        {offer.distance_km !== undefined && offer.distance_km !== null ? (
           <Badge variant="outline" className="text-[10px] text-primary border-primary/30 flex items-center gap-1 font-medium bg-primary/5">
             <MapPin className="size-2.5" />
             {formatDistance(offer.distance_km)}
           </Badge>
-        )}
+        ) : locationLabel ? (
+          <Badge variant="outline" className="text-[10px] text-muted-foreground border-border/60 flex items-center gap-1 font-normal bg-muted/40 hover:bg-muted/60 transition-colors">
+            {locationLabel.isOnline ? <Globe className="size-2.5 text-primary" /> : <MapPin className="size-2.5 text-primary" />}
+            <span className="truncate max-w-[150px]">{locationLabel.text}</span>
+          </Badge>
+        ) : null}
         {offer.category && (
           <Badge variant="secondary" className="text-[10px] transition-colors duration-200 group-hover:bg-primary/10">
             {offer.category}
           </Badge>
         )}
-        {offer.location_scope && (
+        {offer.location_scope && !locationLabel && (
           <LocationScopeBadge scope={offer.location_scope} />
         )}
         {offer.valid_to && !expired && (
@@ -93,6 +108,7 @@ export function OfferCard({ offer, className }: OfferCardProps) {
           </span>
         )}
       </div>
+
 
       {endingSoon && (
         <Badge variant="destructive" className="relative w-fit text-[10px] animate-pulse">
