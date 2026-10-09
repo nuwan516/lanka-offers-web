@@ -20,7 +20,9 @@ import {
   getMerchantName,
   formatDistance,
   formatDiscount,
+  cleanLocationText,
 } from '@/lib/offers'
+
 import type { Offer } from '@/types'
 
 const OfferMap = dynamic(
@@ -253,6 +255,7 @@ function NearbyOfferRow({ offer }: { offer: Offer }) {
   const { t } = useI18n()
   const merchant = getMerchantName(offer)
   const discount = formatDiscount(offer.discount_percentage)
+  const branchAddress = offer.geo_locations?.[0]?.address || offer.geo_locations?.[0]?.name || offer.merchant_location
 
   return (
     <Card className="flex items-center gap-4 p-4 transition-all duration-200 hover:shadow-md hover:border-primary/40">
@@ -268,8 +271,15 @@ function NearbyOfferRow({ offer }: { offer: Offer }) {
 
         <p className="truncate text-xs text-muted-foreground mt-0.5">{offer.title}</p>
 
+        {branchAddress && (
+          <p className="truncate text-[11px] text-muted-foreground flex items-center gap-1 mt-1">
+            <span className="text-primary font-medium">📍</span>
+            <span className="truncate">{cleanLocationText(branchAddress)}</span>
+          </p>
+        )}
+
         {discount && (
-          <p className="text-xs font-medium text-primary mt-1">
+          <p className="text-xs font-semibold text-primary mt-1">
             {discount} {t('offer.discountOff')}
           </p>
         )}
@@ -288,3 +298,4 @@ function NearbyOfferRow({ offer }: { offer: Offer }) {
     </Card>
   )
 }
+

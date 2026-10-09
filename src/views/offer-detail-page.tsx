@@ -2,7 +2,21 @@
 
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, ArrowRight, Heart, ExternalLink, Calendar, CreditCard, MapPin, FileText, ChevronRight } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Heart,
+  ExternalLink,
+  Calendar,
+  CreditCard,
+  MapPin,
+  FileText,
+  ChevronRight,
+  Globe,
+  Phone,
+  Navigation,
+  Store,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -16,8 +30,17 @@ import { LocationScopeBadge } from '@/components/shared/location-scope-badge'
 import { useI18n } from '@/i18n'
 import { useSavedOffers } from '@/hooks/use-saved-offers'
 import { fetchOffer, fetchOffers } from '@/services/api/offers'
-import { formatDiscount, formatDate, getMerchantName, isValidUrl, getValidGeoLocations } from '@/lib/offers'
+import {
+  formatDiscount,
+  formatDate,
+  getMerchantName,
+  isValidUrl,
+  getValidGeoLocations,
+  extractPhoneNumbers,
+  cleanLocationText,
+} from '@/lib/offers'
 import type { Offer, OfferDetail } from '@/types'
+
 
 export function OfferDetailPage({ params }: { params?: { id?: string } }) {
   const routerParams = useParams<{ id?: string }>()
@@ -182,35 +205,181 @@ export function OfferDetailPage({ params }: { params?: { id?: string } }) {
         </Card>
       )}
 
-      {/* Locations */}
-      {geoLocations.length > 0 && (
+      {/* Locations & Availability */}
+      {offer.location_scope === 'ONLINE' ? (
         <Card className="mb-4 p-4">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-            <MapPin className="size-4" />
-            {t('offer.branches', { count: geoLocations.length })}
-          </h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="flex items-center gap-2 text-sm font-semibold">
+              <Globe className="size-4 text-primary" />
+              Online Promotion
+            </h2>
+            <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">
+              Web & App
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            This promotion is valid for online purchases and digital orders through the merchant's official website or app.
+          </p>
+          {offer.source_url && isValidUrl(offer.source_url) && (
+            <Button variant="outline" size="sm" asChild className="mt-3 text-xs h-8">
+              <a href={offer.source_url} target="_blank" rel="noopener noreferrer" className="gap-1.5">
+                <ExternalLink className="size-3.5" />
+                Redeem Online / Open Merchant Site
+              </a>
+            </Button>
+          )}
+        </Card>
+      ) : geoLocations.length > 0 ? (
+        <Card className="mb-4 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold">
+              <MapPin className="size-4 text-primary" />
+              {geoLocations.length === 1 ? 'Branch Location' : `Participating Branches (${geoLocations.length})`}
+            </h2>
+            {offer.location_scope && (
+              <LocationScopeBadge scope={offer.location_scope} />
+            )}
+          </div>
           <div className="space-y-2">
-            {geoLocations.map((loc, i) => (
-              <div key={i} className="flex items-start justify-between gap-2 rounded-md bg-muted/40 p-2.5 text-xs">
-                <div>
-                  <p className="font-medium">{loc.name || loc.address || merchant}</p>
-                  {loc.name && loc.address && (
-                    <p className="text-muted-foreground">{loc.address}</p>
-                  )}
+            {geoLocations.map((loc, i) => {
+              const branchTitle = loc.name ? cleanLocationText(loc.name) : (loc.city || merchant)
+              return (
+                <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3 text-xs transition-colors hover:bg-muted/50">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 font-medium text-foreground">
+                      <Store className="size-3.5 text-muted-foreground shrink-0" />
+                      <span className="truncate">{branchTitle}</span>
+                    </div>
+                    {loc.address && (
+                      <p className="text-muted-foreground mt-0.5 pl-5">{loc.address}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 pt-1 sm:pt-0 pl-5 sm:pl-0">
+                    <Button variant="outline" size="sm" asChild className="h-7 text-xs px-2.5">
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="gap-1 inline-flex items-center text-primary"
+                      >
+                        <Navigation className="size-3" />
+                        {t('offer.viewMap')}
+                      </a>
+                    </Button>
+                  </div>
                 </div>
+              )
+            })}
+          </div>
+
+          {/* Location details or outlet listing text */}
+          {offer.merchant_location && (
+            <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
+              <p className="font-medium text-foreground mb-1">Outlet Notes & Details:</p>
+              <p className="whitespace-pre-line leading-relaxed">{offer.merchant_location}</p>
+            </div>
+          )}
+
+          {/* Contact numbers if available */}
+          {extractPhoneNumbers(offer.merchant_location).length > 0 && (
+            <div className="mt-3 pt-3 border-t flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-muted-foreground font-medium flex items-center gap-1">
+                <Phone className="size-3" /> Contact:
+              </span>
+              {extractPhoneNumbers(offer.merchant_location).map((phone) => (
                 <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 text-primary hover:underline"
+                  key={phone}
+                  href={`tel:${phone.replace(/\s+/g, '')}`}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded border bg-card text-foreground font-mono hover:text-primary transition-colors"
                 >
-                  {t('offer.viewMap')}
+                  {phone}
                 </a>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
+        </Card>
+      ) : offer.location_scope === 'NATIONWIDE' ? (
+        <Card className="mb-4 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold">
+              <Globe className="size-4 text-primary" />
+              Islandwide Promotion
+            </h2>
+            <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">
+              All Outlets
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            This promotion is valid across all official branches and outlets of {merchant} throughout Sri Lanka.
+          </p>
+          {offer.merchant_location && (
+            <div className="mt-2.5 rounded-md bg-muted/30 p-2.5 text-xs text-muted-foreground">
+              <p className="font-medium text-foreground mb-0.5">Participating Outlets:</p>
+              <p className="whitespace-pre-line">{offer.merchant_location}</p>
+            </div>
+          )}
+          <div className="mt-3 flex items-center gap-2">
+            <Button variant="outline" size="sm" asChild className="h-8 text-xs">
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(merchant + ' Sri Lanka')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="gap-1.5"
+              >
+                <Navigation className="size-3.5" />
+                Find Nearest Outlet on Google Maps
+              </a>
+            </Button>
           </div>
         </Card>
-      )}
+      ) : offer.merchant_location ? (
+        <Card className="mb-4 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold">
+              <MapPin className="size-4 text-primary" />
+              Participating Outlets & Locations
+            </h2>
+            {offer.location_scope && (
+              <LocationScopeBadge scope={offer.location_scope} />
+            )}
+          </div>
+          <div className="rounded-md bg-muted/40 p-3 text-xs leading-relaxed text-foreground">
+            <p className="whitespace-pre-line font-medium">{offer.merchant_location}</p>
+          </div>
+
+          {extractPhoneNumbers(offer.merchant_location).length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-muted-foreground font-medium flex items-center gap-1">
+                <Phone className="size-3" /> Contact:
+              </span>
+              {extractPhoneNumbers(offer.merchant_location).map((phone) => (
+                <a
+                  key={phone}
+                  href={`tel:${phone.replace(/\s+/g, '')}`}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded border bg-card text-foreground font-mono hover:text-primary transition-colors"
+                >
+                  {phone}
+                </a>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-3">
+            <Button variant="outline" size="sm" asChild className="h-8 text-xs">
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(merchant + ' ' + cleanLocationText(offer.merchant_location) + ' Sri Lanka')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="gap-1.5"
+              >
+                <Navigation className="size-3.5" />
+                Search Locations on Google Maps
+              </a>
+            </Button>
+          </div>
+        </Card>
+      ) : null}
+
 
       {/* Terms */}
       {offer.terms && (

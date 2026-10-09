@@ -15,7 +15,8 @@ export function SavedPage() {
   const { t } = useI18n()
   const router = useRouter()
   const { savedIds } = useSavedOffers()
-  const { offers, loading, error, refetch } = useOffers({ status: 'active', limit: 200 })
+  const { offers, loading, error, refetch } = useOffers({ status: 'active', limit: 500 })
+
 
   const savedOffers = useMemo(() => {
     return offers.filter((o) => savedIds.includes(o.id))

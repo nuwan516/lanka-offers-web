@@ -12,3 +12,13 @@ export async function fetchMerchants(): Promise<Merchant[]> {
   }
   return []
 }
+
+export async function fetchMerchant(name: string): Promise<Merchant | null> {
+  try {
+    const result = await apiFetch<Merchant>(`/api/merchants/${encodeURIComponent(name)}`)
+    return result || null
+  } catch {
+    return null
+  }
+}
+

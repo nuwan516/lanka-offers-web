@@ -30,8 +30,15 @@ export function ExplorePage() {
   const cardType = searchParams?.get('cardType') || ''
   const sortBy = searchParams?.get('sortBy') || 'newest'
 
-  const { offers, loading, error, refetch } = useOffers({ status: 'active', limit: 200 })
+  const { offers, loading, error, refetch } = useOffers({
+    status: 'active',
+    bank: bank || undefined,
+    category: category || undefined,
+    search: search || undefined,
+    limit: 200,
+  })
   const { banks } = useReferenceData()
+
 
   const categories = useMemo(() => deriveCategories(offers), [offers])
   const cardTypes = useMemo(() => deriveCardTypes(offers), [offers])
