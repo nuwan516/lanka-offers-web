@@ -1,30 +1,31 @@
 import { Skeleton } from '@/components/ui/skeleton'
-import { Card } from '@/components/ui/card'
 
 export function OfferCardSkeleton() {
   return (
-    <Card className="gap-3 p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-5 w-20" />
-        </div>
-        <Skeleton className="size-6 rounded-md" />
+    <div className="flex h-full flex-col gap-3 rounded-lg border bg-card p-4" aria-hidden="true">
+      <Skeleton className="h-5 w-28" />
+      <div className="space-y-2">
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-2/3" />
       </div>
-      <Skeleton className="h-8 w-16" />
-      <Skeleton className="h-4 w-full" />
-      <Skeleton className="h-4 w-3/4" />
-      <div className="flex gap-2">
-        <Skeleton className="h-4 w-16 rounded-full" />
-        <Skeleton className="h-4 w-20 rounded-full" />
+      <Skeleton className="mt-2 h-7 w-32" />
+      <div className="flex gap-3 border-t pt-3">
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="ml-auto h-4 w-24" />
       </div>
-    </Card>
+    </div>
   )
 }
 
 export function OfferGridSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div
+      role="status"
+      aria-busy="true"
+      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+    >
+      <span className="sr-only">Loading</span>
       {Array.from({ length: count }).map((_, i) => (
         <OfferCardSkeleton key={i} />
       ))}

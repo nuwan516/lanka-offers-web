@@ -15,31 +15,26 @@ export function useOffers(query: OffersQuery = {}): UseOffersState {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<Error | null>(null)
   const [nonce, setNonce] = React.useState(0)
+  const queryKey = JSON.stringify(query)
 
   React.useEffect(() => {
-    let cancelled = false
+    const controller = new AbortController()
     setLoading(true)
     setError(null)
 
-    fetchOffers(query)
+    fetchOffers(JSON.parse(queryKey) as OffersQuery, controller.signal)
       .then((data) => {
-        if (!cancelled) {
-          setOffers(data)
-          setLoading(false)
-        }
+        setOffers(data)
+        setLoading(false)
       })
       .catch((err: Error) => {
-        if (!cancelled) {
-          setError(err)
-          setLoading(false)
-        }
+        if (controller.signal.aborted) return
+        setError(err)
+        setLoading(false)
       })
 
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(query), nonce])
+    return () => controller.abort()
+  }, [queryKey, nonce])
 
   const refetch = React.useCallback(() => setNonce((n) => n + 1), [])
 

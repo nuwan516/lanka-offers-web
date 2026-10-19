@@ -15,7 +15,7 @@ export function SavedPage() {
   const { t } = useI18n()
   const router = useRouter()
   const { savedIds } = useSavedOffers()
-  const { offers, loading, error, refetch } = useOffers({ status: 'active', limit: 500 })
+  const { offers, loading, error, refetch } = useOffers()
 
 
   const savedOffers = useMemo(() => {
@@ -24,7 +24,7 @@ export function SavedPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-6xl px-4 py-6">
         <h1 className="mb-6 text-xl font-bold tracking-tight">{t('saved.title')}</h1>
         <OfferGridSkeleton />
       </div>
@@ -33,7 +33,7 @@ export function SavedPage() {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-6xl px-4 py-6">
         <h1 className="mb-6 text-xl font-bold tracking-tight">{t('saved.title')}</h1>
         <ErrorState onRetry={refetch} />
       </div>
@@ -42,7 +42,7 @@ export function SavedPage() {
 
   if (savedOffers.length === 0) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-6xl px-4 py-6">
         <h1 className="mb-6 text-xl font-bold tracking-tight">{t('saved.title')}</h1>
         <EmptyState
           title={t('saved.empty')}
@@ -55,7 +55,7 @@ export function SavedPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
+    <div className="mx-auto max-w-6xl px-4 py-6">
       <h1 className="mb-6 text-xl font-bold tracking-tight">{t('saved.title')}</h1>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {savedOffers.map((offer) => (

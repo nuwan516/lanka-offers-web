@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Search } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowRight, MapPin, Search } from 'lucide-react'
+import { useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,149 +13,222 @@ import { ErrorState } from '@/components/shared/error-state'
 import { useI18n } from '@/i18n'
 import { useOffers } from '@/hooks/use-offers'
 import { useReferenceData } from '@/hooks/use-reference-data'
-import { sortOffers, isEndingSoon } from '@/lib/offers'
+import { BANKS } from '@/lib/banks'
+import { deriveCategories, isEndingSoon, isExpired, sortOffers } from '@/lib/offers'
+import { cn } from '@/lib/utils'
 
 export function HomePage() {
   const { t } = useI18n()
   const router = useRouter()
   const [search, setSearch] = useState('')
 
-  const { offers, loading, error, refetch } = useOffers({ status: 'active', limit: 200 })
+  const { offers, loading, error, refetch } = useOffers()
   const { banks } = useReferenceData()
+
+  const live = useMemo(() => offers.filter((o) => !isExpired(o.valid_to)), [offers])
+  const topDiscounts = useMemo(() => sortOffers(live, 'discount').slice(0, 8), [live])
+  const endingSoon = useMemo(
+    () => sortOffers(live.filter((o) => isEndingSoon(o.valid_to)), 'endingSoon').slice(0, 4),
+    [live]
+  )
+  const categories = useMemo(() => deriveCategories(live).filter((c) => c.toLowerCase() !== 'all').slice(0, 10), [live])
+
+  // The ten supported banks, with live counts from the API where available.
+  const bankRows = useMemo(() => {
+    const counts = new Map(banks.map((b) => [(b.code ?? b.name).toLowerCase(), b.activeOfferCount]))
+    return BANKS.map((b) => ({ ...b, count: counts.get(b.code) }))
+  }, [banks])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    if (search.trim()) {
-      router.push(`/explore?search=${encodeURIComponent(search.trim())}`)
-    }
+    const q = search.trim()
+    if (q) router.push(`/explore?search=${encodeURIComponent(q)}`)
   }
 
-  const sortedByDiscount = sortOffers(offers, 'discount').slice(0, 8)
-  const endingSoon = offers.filter((o) => isEndingSoon(o.valid_to)).slice(0, 4)
-  const featuredOffers = offers.filter((o) => o.discount_percentage && parseInt(String(o.discount_percentage)) >= 50).slice(0, 3)
-  const bankList = banks.length > 0 ? banks : deriveBanksFromOffers(offers)
-
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 lg:py-10">
-      {/* Hero */}
-      <section className="mb-8 space-y-6 lg:mb-12">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-8 lg:p-12">
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background" />
-          <div className="relative space-y-4">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-              {t('app.tagline')}
-            </h1>
-            <p className="max-w-2xl text-base text-muted-foreground sm:text-lg">
-              {t('app.description')}
-            </p>
-          </div>
+    <div className="mx-auto max-w-6xl space-y-12 px-4 py-8 lg:py-12">
+      <section aria-labelledby="home-heading" className="space-y-5">
+        <div className="max-w-2xl space-y-2">
+          <h1 id="home-heading" className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+            {t('app.tagline')}
+          </h1>
+          <p className="text-base text-muted-foreground">{t('app.description')}</p>
         </div>
 
-        <form onSubmit={handleSearch} className="flex max-w-2xl gap-2">
+        <form onSubmit={handleSearch} role="search" className="flex max-w-2xl gap-2">
           <div className="relative flex-1">
-            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search
+              className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
             <Input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t('search.placeholder')}
-              className="h-12 pl-9 text-base shadow-sm transition-shadow focus:shadow-md"
+              className="h-12 pl-10 text-base"
               aria-label={t('search.placeholder')}
             />
           </div>
-          <Button type="submit" size="lg" className="h-12 px-6">
+          <Button type="submit" className="h-12 px-6">
             {t('search.button')}
           </Button>
         </form>
-      </section>
 
-      {/* Bank quick filters */}
-      {bankList.length > 0 && (
-        <section className="mb-8 lg:mb-10">
-          <h2 className="mb-3 text-sm font-semibold text-foreground">{t('bank.title')}</h2>
-          <div className="flex flex-wrap gap-2">
-            {bankList.slice(0, 12).map((bank) => (
-              <Link
-                key={bank.code || bank.name}
-                href={`/explore?bank=${encodeURIComponent(bank.code || bank.name)}`}
-                className="rounded-full border bg-card px-4 py-2 text-sm font-medium text-foreground transition-all duration-200 hover:border-primary hover:bg-primary/10 hover:shadow-sm active:scale-95"
-              >
-                {bank.name}
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Featured offers */}
-      {featuredOffers.length > 0 && (
-        <section className="mb-8 lg:mb-10">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold tracking-tight">{t('offer.featured')}</h2>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/explore">
-                {t('common.viewAll')}
-                <ArrowRight className="size-3.5" />
-              </Link>
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {featuredOffers.map((offer) => (
-              <OfferCard key={offer.id} offer={offer} className="border-primary/50" />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Best offers */}
-      <section className="mb-8 lg:mb-10">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold tracking-tight">{t('offer.benefit')}</h2>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/explore">
-              {t('common.viewAll')}
-              <ArrowRight className="size-3.5" />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/nearby">
+              <MapPin className="size-4" aria-hidden="true" />
+              {t('home.nearbyCta')}
             </Link>
           </Button>
+          {categories.slice(0, 6).map((c) => (
+            <Link
+              key={c}
+              href={`/explore?category=${encodeURIComponent(c)}`}
+              className="rounded-full border bg-card px-3 py-1.5 text-sm text-foreground transition-colors hover:border-primary/40 hover:bg-primary-soft"
+            >
+              {c}
+            </Link>
+          ))}
         </div>
-        {loading ? (
-          <OfferGridSkeleton count={8} />
-        ) : error ? (
-          <ErrorState onRetry={refetch} />
-        ) : sortedByDiscount.length === 0 ? (
-          <ErrorState title={t('search.noResults')} hint={t('search.noResultsHint')} />
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {sortedByDiscount.map((offer) => (
-              <OfferCard key={offer.id} offer={offer} />
-            ))}
-          </div>
-        )}
       </section>
 
-      {/* Ending soon */}
+      <section aria-labelledby="banks-heading" className="space-y-4">
+        <h2 id="banks-heading" className="text-lg font-semibold tracking-tight">
+          {t('bank.title')}
+        </h2>
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {bankRows.map((b) => {
+            const hasOffers = b.count === undefined || b.count > 0
+            const body = (
+              <>
+                <span className="flex items-center gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="inline-flex h-6 min-w-9 items-center justify-center rounded-sm bg-primary-soft px-1 text-[11px] font-semibold text-primary"
+                  >
+                    {b.short}
+                  </span>
+                </span>
+                <span className="mt-2 block text-sm font-medium leading-snug text-foreground">{b.name}</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  {b.count === undefined
+                    ? ' '
+                    : b.count > 0
+                      ? t('bank.activeOffers', { count: b.count })
+                      : t('bank.noActive')}
+                </span>
+              </>
+            )
+            return (
+              <li key={b.code}>
+                {hasOffers ? (
+                  <Link
+                    href={`/explore?bank=${b.code}`}
+                    className="block h-full rounded-lg border bg-card p-3 transition-colors hover:border-primary/40"
+                  >
+                    {body}
+                  </Link>
+                ) : (
+                  <div className={cn('h-full rounded-lg border border-dashed bg-surface p-3')}>{body}</div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+
+      <OfferSection
+        title={t('offer.featured')}
+        offers={topDiscounts}
+        loading={loading}
+        error={error}
+        onRetry={refetch}
+        emptyTitle={t('search.noResults')}
+        emptyHint={t('search.noResultsHint')}
+        viewAll={t('common.viewAll')}
+        href="/explore?sortBy=discount"
+      />
+
       {endingSoon.length > 0 && (
-        <section className="mb-8 lg:mb-10">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold tracking-tight">{t('offer.endingSoon')}</h2>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {endingSoon.map((offer) => (
-              <OfferCard key={offer.id} offer={offer} />
-            ))}
-          </div>
-        </section>
+        <OfferSection
+          title={t('offer.endingSoon')}
+          offers={endingSoon}
+          loading={false}
+          error={null}
+          onRetry={refetch}
+          emptyTitle=""
+          emptyHint=""
+          viewAll={t('common.viewAll')}
+          href="/explore?sortBy=endingSoon"
+        />
       )}
+
+      <section aria-labelledby="guide-heading" className="space-y-4 rounded-lg border bg-surface p-5 sm:p-6">
+        <h2 id="guide-heading" className="text-lg font-semibold tracking-tight">
+          {t('home.guide.title')}
+        </h2>
+        <dl className="grid gap-5 sm:grid-cols-3">
+          {(['upTo', 'cards', 'dates'] as const).map((k) => (
+            <div key={k} className="space-y-1">
+              <dt className="text-sm font-semibold">{t(`home.guide.${k}.title`)}</dt>
+              <dd className="text-sm leading-6 text-muted-foreground">{t(`home.guide.${k}.body`)}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
     </div>
   )
 }
 
-function deriveBanksFromOffers(offers: { bank: string }[]) {
-  const seen = new Map<string, { name: string; code: string }>()
-  for (const o of offers) {
-    if (o.bank && !seen.has(o.bank)) {
-      seen.set(o.bank, { name: o.bank, code: o.bank })
-    }
-  }
-  return Array.from(seen.values())
+interface OfferSectionProps {
+  title: string
+  offers: Parameters<typeof OfferCard>[0]['offer'][]
+  loading: boolean
+  error: Error | null
+  onRetry: () => void
+  emptyTitle: string
+  emptyHint: string
+  viewAll: string
+  href: string
+}
+
+function OfferSection({
+  title,
+  offers,
+  loading,
+  error,
+  onRetry,
+  emptyTitle,
+  emptyHint,
+  viewAll,
+  href,
+}: OfferSectionProps) {
+  return (
+    <section aria-label={title} className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+        <Button variant="ghost" size="sm" asChild>
+          <Link href={href}>
+            {viewAll}
+            <ArrowRight className="size-3.5" aria-hidden="true" />
+          </Link>
+        </Button>
+      </div>
+      {loading ? (
+        <OfferGridSkeleton count={8} />
+      ) : error ? (
+        <ErrorState onRetry={onRetry} />
+      ) : offers.length === 0 ? (
+        <ErrorState title={emptyTitle} hint={emptyHint} />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {offers.map((offer) => (
+            <OfferCard key={offer.id} offer={offer} />
+          ))}
+        </div>
+      )}
+    </section>
+  )
 }

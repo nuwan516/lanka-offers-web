@@ -39,7 +39,7 @@ export function MerchantsPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-6xl px-4 py-6">
         <h1 className="mb-6 text-xl font-bold tracking-tight">{t('merchants.title')}</h1>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -52,7 +52,7 @@ export function MerchantsPage() {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-6xl px-4 py-6">
         <h1 className="mb-6 text-xl font-bold tracking-tight">{t('merchants.title')}</h1>
         <ErrorState onRetry={() => window.location.reload()} />
       </div>
@@ -60,12 +60,12 @@ export function MerchantsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
+    <div className="mx-auto max-w-6xl px-4 py-6">
       <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('merchants.title')}</h1>
           <p className="text-sm text-muted-foreground">
-            Explore {merchants.length} partner merchants offering exclusive discounts across Sri Lanka
+            {t('merchants.subtitle', { count: merchants.length })}
           </p>
         </div>
       </div>
@@ -121,12 +121,12 @@ function MerchantCard({ merchant }: { merchant: Merchant }) {
         <div className="mt-4 pt-3 border-t flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
           {merchant.offer_count != null && (
             <span className="font-medium text-foreground">
-              {merchant.offer_count} {merchant.offer_count === 1 ? 'promotion' : 'promotions'}
+              {t('merchants.activeOffers', { count: merchant.offer_count ?? 0 })}
             </span>
           )}
           {merchant.banks && merchant.banks.length > 0 && (
             <span className="text-[11px] text-muted-foreground">
-              Across {merchant.banks.length} {merchant.banks.length === 1 ? 'bank' : 'banks'}
+              {t('merchants.acrossBanks', { count: merchant.banks.length })}
             </span>
           )}
         </div>
@@ -146,8 +146,6 @@ export function MerchantDetailPage({ params }: { params?: { merchant?: string } 
   // Fetch offers strictly filtered for this merchant from the backend
   const { offers, loading, error, refetch } = useOffers({
     merchant: decoded,
-    status: 'active',
-    limit: 100,
   })
 
   useEffect(() => {
@@ -164,7 +162,7 @@ export function MerchantDetailPage({ params }: { params?: { merchant?: string } 
   }, [decoded])
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
+    <div className="mx-auto max-w-6xl px-4 py-6">
       <Button variant="ghost" size="sm" asChild className="mb-4">
         <Link href="/merchants">
           <ArrowLeft className="size-4" />
