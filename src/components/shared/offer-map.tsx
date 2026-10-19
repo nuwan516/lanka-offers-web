@@ -6,7 +6,7 @@ import 'leaflet/dist/leaflet.css'
 
 import type { Offer } from '@/types'
 import {
-  getValidGeoLocations,
+  getConfirmedBranches,
   getMerchantName,
   formatDiscount,
   haversineDistance,
@@ -70,7 +70,7 @@ export function OfferMap({ offers, userLocation, className, selectedOfferId, onS
     const bounds: L.LatLngExpression[] = []
 
     for (const offer of offers) {
-      const locations = getValidGeoLocations(offer)
+      const locations = getConfirmedBranches(offer)
       for (const loc of locations) {
         const marker = L.marker([loc.lat, loc.lng])
         const merchant = getMerchantName(offer)
@@ -136,7 +136,7 @@ export function OfferMap({ offers, userLocation, className, selectedOfferId, onS
 
     const offer = offers.find((o) => o.id === selectedOfferId)
     if (!offer) return
-    const locs = getValidGeoLocations(offer)
+    const locs = getConfirmedBranches(offer)
     if (locs.length > 0) {
       map.panTo([locs[0].lat, locs[0].lng], { animate: true })
     }

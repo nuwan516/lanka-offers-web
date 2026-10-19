@@ -1,13 +1,60 @@
 import type { Offer, LocationScope, CardEligibility, CardPreference } from '@/types'
 
-export function formatDiscount(value?: number | string): string | null {
+const COLOMBO_TZ = 'Asia/Colombo'
+
+/** Numeric discount from the API's string field, or null when absent/invalid. */
+export function parseDiscount(value?: number | string | null): number | null {
   if (value === undefined || value === null || value === '') return null
   const num = typeof value === 'string' ? parseFloat(value) : value
-  if (isNaN(num)) return null
-  return `${Math.round(num)}%`
+  return Number.isFinite(num) && num > 0 ? num : null
 }
 
-export function formatDate(dateString?: string, lang = 'en'): string {
+export function formatDiscount(value?: number | string | null): string | null {
+  const num = parseDiscount(value)
+  return num === null ? null : `${Math.round(num)}%`
+}
+
+const UP_TO_PERCENT = /\bup\s*to\s+(?:rs\.?\s*)?(\d+(?:\.\d+)?)\s*%/gi
+
+export interface DiscountPresentation {
+  value: string
+  /** true only when the bank's own title/description says "up to". */
+  isUpTo: boolean
+}
+
+/**
+ * The API exposes a single discount_percentage with no "up to" flag, so the
+ * qualifier is taken from the bank's own wording and never assumed.
+ */
+export function getDiscountPresentation(offer: Offer): DiscountPresentation | null {
+  const value = formatDiscount(offer.discount_percentage)
+  if (!value) return null
+  const text = `${offer.title ?? ''} ${offer.description ?? ''}`
+  const target = Math.round(parseDiscount(offer.discount_percentage) ?? -1)
+  // "Up to 50%" counts only when the percentage after it is this offer's discount;
+  // "Up to 12 months 0% installments" must not turn a plain discount into "up to".
+  const isUpTo = Array.from(text.matchAll(UP_TO_PERCENT)).some((m) => Math.round(parseFloat(m[1])) === target)
+  return { value, isUpTo }
+}
+
+function colomboDateKey(date: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: COLOMBO_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
+}
+
+function daysFromTodayColombo(dateString?: string | null): number | null {
+  if (!dateString) return null
+  const date = new Date(dateString)
+  if (isNaN(date.getTime())) return null
+  const day = (key: string) => Date.parse(`${key}T00:00:00Z`)
+  return Math.round((day(colomboDateKey(date)) - day(colomboDateKey(new Date()))) / 86_400_000)
+}
+
+export function formatDate(dateString?: string | null, lang = 'en'): string {
   if (!dateString) return ''
   const date = new Date(dateString)
   if (isNaN(date.getTime())) return ''
@@ -16,24 +63,24 @@ export function formatDate(dateString?: string, lang = 'en'): string {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+    timeZone: COLOMBO_TZ,
   })
 }
 
-export function isEndingSoon(validTo?: string): boolean {
-  if (!validTo) return false
-  const date = new Date(validTo)
-  if (isNaN(date.getTime())) return false
-  const now = new Date()
-  const diff = date.getTime() - now.getTime()
-  const days = diff / (1000 * 60 * 60 * 24)
-  return days >= 0 && days <= 7
+/** Valid through the whole of the valid_to day (Sri Lanka time). */
+export function isExpired(validTo?: string | null): boolean {
+  const days = daysFromTodayColombo(validTo)
+  return days !== null && days < 0
 }
 
-export function isExpired(validTo?: string): boolean {
-  if (!validTo) return false
-  const date = new Date(validTo)
-  if (isNaN(date.getTime())) return false
-  return date.getTime() < Date.now()
+export function isEndingSoon(validTo?: string | null): boolean {
+  const days = daysFromTodayColombo(validTo)
+  return days !== null && days >= 0 && days <= 7
+}
+
+export function daysLeft(validTo?: string | null): number | null {
+  const days = daysFromTodayColombo(validTo)
+  return days !== null && days >= 0 ? days : null
 }
 
 const PHYSICAL_SCOPES: LocationScope[] = [
@@ -61,6 +108,42 @@ export function getValidGeoLocations(offer: Offer): NonNullable<Offer['geo_locat
   )
 }
 
+const UNPINNABLE_SCOPES = new Set(['ONLINE', 'NATIONWIDE', 'SELECTED_OUTLETS', 'UNRESOLVED'])
+
+/**
+ * The geocoder sometimes resolves "Colombo, Sri Lanka" to the city centre and
+ * reports it as resolved. The API carries no precision flag, so a location whose
+ * address is only a place name (no street, no number, at most two words) is
+ * treated as area-level: never pinned, never given a distance, because that
+ * would present a town centre as a branch. Mirrors the Flutter app's rule.
+ */
+export function isAreaLevelLocation(loc: { address?: string; name?: string }): boolean {
+  const raw = (loc.address || loc.name || '').trim()
+  if (!raw) return true
+  const place = raw.replace(/,?\s*sri\s*lanka\s*$/i, '').trim()
+  if (!place) return true
+  return !/\d/.test(place) && !place.includes(',') && place.split(/\s+/).length <= 2
+}
+
+/** Locations that are a real branch address rather than just an area. */
+export function getConfirmedBranches(offer: Offer): NonNullable<Offer['geo_locations']> {
+  return getValidGeoLocations(offer).filter((loc) => !isAreaLevelLocation(loc))
+}
+
+/** Only offers with a confirmed branch may be pinned or given a distance. */
+export function hasConfirmedBranch(offer: Offer): boolean {
+  if (offer.location_scope && UNPINNABLE_SCOPES.has(offer.location_scope)) return false
+  return getConfirmedBranches(offer).length > 0
+}
+
+/** The area-only place name (without the country), or null if there is a branch. */
+export function getAreaOnlyLabel(offer: Offer): string | null {
+  const geos = getValidGeoLocations(offer)
+  if (geos.length === 0 || getConfirmedBranches(offer).length > 0) return null
+  const first = geos[0]
+  return (first.address || first.name || '').replace(/,?\s*sri\s*lanka\s*$/i, '').trim() || null
+}
+
 export function extractPhoneNumbers(text?: string): string[] {
   if (!text) return []
   const phoneRegex = /(?:\+94|0)(?:7[0-8]|11|2[1-8]|3[1-8]|4[1-7]|5[1-7]|6[3-7]|81|91)\s?\d{3}\s?\d{4}|\b(?:07\d{8}|011\d{7}|0[2-9]\d{7,8})\b/g
@@ -85,7 +168,12 @@ export function getConciseLocationLabel(offer: Offer): { text: string; isOnline:
     return { text: 'Islandwide', isOnline: false, isNationwide: true }
   }
 
-  const validGeos = getValidGeoLocations(offer)
+  const areaOnly = getAreaOnlyLabel(offer)
+  if (areaOnly) {
+    return { text: `Area only: ${areaOnly}`.slice(0, 28), isOnline: false, isNationwide: false }
+  }
+
+  const validGeos = getConfirmedBranches(offer)
   if (validGeos.length > 0) {
     const first = validGeos[0]
     const cityName = first.city || first.district || cleanLocationText(first.name || first.address)
@@ -116,9 +204,6 @@ export function getConciseLocationLabel(offer: Offer): { text: string; isOnline:
   }
   if (offer.location_scope === 'SELECTED_OUTLETS') {
     return { text: 'Selected Outlets', isOnline: false, isNationwide: false }
-  }
-  if (offer.location_scope === 'EXPLICIT_BRANCH') {
-    return { text: 'Branch', isOnline: false, isNationwide: false }
   }
 
   return null
@@ -217,8 +302,21 @@ export function isValidUrl(url: string): boolean {
   }
 }
 
+const HTML_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' }
+
+/** The API occasionally passes through HTML entities from bank pages (e.g. &#x27;). */
+export function decodeHtmlEntities(text: string): string {
+  return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, code: string) => {
+    if (code[0] === '#') {
+      const point = code[1].toLowerCase() === 'x' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10)
+      return Number.isFinite(point) ? String.fromCodePoint(point) : match
+    }
+    return HTML_ENTITIES[code.toLowerCase()] ?? match
+  })
+}
+
 export function getMerchantName(offer: Offer): string {
-  return offer.merchant_name || offer.canonical_merchant || 'Unknown merchant'
+  return decodeHtmlEntities(offer.merchant_name || offer.canonical_merchant || 'Unknown merchant')
 }
 
 export function sortOffers(offers: Offer[], sortBy: string): Offer[] {
@@ -231,11 +329,9 @@ export function sortOffers(offers: Offer[], sortBy: string): Offer[] {
         return da - db
       })
     case 'discount':
-      return sorted.sort((a, b) => {
-        const pa = typeof a.discount_percentage === 'number' ? a.discount_percentage : 0
-        const pb = typeof b.discount_percentage === 'number' ? b.discount_percentage : 0
-        return pb - pa
-      })
+      return sorted.sort(
+        (a, b) => (parseDiscount(b.discount_percentage) ?? 0) - (parseDiscount(a.discount_percentage) ?? 0)
+      )
     default:
       return sorted
   }

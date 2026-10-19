@@ -26,16 +26,19 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ErrorState } from '@/components/shared/error-state'
 import { BankBadge } from '@/components/shared/bank-badge'
+import { DiscountLabel } from '@/components/shared/discount-badge'
 import { LocationScopeBadge } from '@/components/shared/location-scope-badge'
 import { useI18n } from '@/i18n'
 import { useSavedOffers } from '@/hooks/use-saved-offers'
 import { fetchOffer, fetchOffers } from '@/services/api/offers'
 import {
-  formatDiscount,
+  getDiscountPresentation,
+  isExpired,
   formatDate,
   getMerchantName,
   isValidUrl,
-  getValidGeoLocations,
+  getConfirmedBranches,
+  getAreaOnlyLabel,
   extractPhoneNumbers,
   cleanLocationText,
 } from '@/lib/offers'
@@ -76,7 +79,7 @@ export function OfferDetailPage({ params }: { params?: { id?: string } }) {
     // Load sibling offers for prev/next navigation
     const bank = searchParams?.get('bank')
     const search = searchParams?.get('search')
-    fetchOffers({ status: 'active', limit: 200, bank: bank || undefined, search: search || undefined })
+    fetchOffers({ limit: 200, bank: bank || undefined, search: search || undefined })
       .then((data) => {
         if (cancelled) return
         setSiblingOffers(data)
@@ -111,8 +114,9 @@ export function OfferDetailPage({ params }: { params?: { id?: string } }) {
 
   const saved = isSaved(offer.id)
   const merchant = getMerchantName(offer)
-  const discount = formatDiscount(offer.discount_percentage)
-  const geoLocations = getValidGeoLocations(offer)
+  const discount = getDiscountPresentation(offer)
+  const geoLocations = getConfirmedBranches(offer)
+  const areaOnly = getAreaOnlyLabel(offer)
   const eligibility = offer.card_eligibility
 
   // Sibling navigation
@@ -149,10 +153,16 @@ export function OfferDetailPage({ params }: { params?: { id?: string } }) {
           </Button>
         </div>
 
+        {isExpired(offer.valid_to) && (
+          <p role="status" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            {t('offer.expiredNotice')}
+          </p>
+        )}
+
         {discount && (
-          <div className="flex items-center gap-2">
-            <span className="text-3xl font-bold tracking-tight">{discount}</span>
-            <span className="text-sm font-medium text-muted-foreground">{t('offer.discountOff')}</span>
+          <div className="space-y-1">
+            <DiscountLabel offer={offer} size="lg" />
+            <p className="text-xs text-muted-foreground">{t('offer.discountNote')}</p>
           </div>
         )}
 
@@ -211,15 +221,10 @@ export function OfferDetailPage({ params }: { params?: { id?: string } }) {
           <div className="flex items-center justify-between mb-2">
             <h2 className="flex items-center gap-2 text-sm font-semibold">
               <Globe className="size-4 text-primary" />
-              Online Promotion
+              {t('location.online')}
             </h2>
-            <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">
-              Web & App
-            </Badge>
           </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            This promotion is valid for online purchases and digital orders through the merchant's official website or app.
-          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed">{t('offer.onlineNote')}</p>
           {offer.source_url && isValidUrl(offer.source_url) && (
             <Button variant="outline" size="sm" asChild className="mt-3 text-xs h-8">
               <a href={offer.source_url} target="_blank" rel="noopener noreferrer" className="gap-1.5">
@@ -298,20 +303,26 @@ export function OfferDetailPage({ params }: { params?: { id?: string } }) {
             </div>
           )}
         </Card>
+      ) : areaOnly ? (
+        <Card className="mb-4 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold">
+              <MapPin className="size-4 text-primary" />
+              {t('location.areaOnly', { area: areaOnly })}
+            </h2>
+            {offer.location_scope && <LocationScopeBadge scope={offer.location_scope} />}
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">{t('offer.areaOnlyNote')}</p>
+        </Card>
       ) : offer.location_scope === 'NATIONWIDE' ? (
         <Card className="mb-4 p-4">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-sm font-semibold">
               <Globe className="size-4 text-primary" />
-              Islandwide Promotion
+              {t('location.nationwide')}
             </h2>
-            <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">
-              All Outlets
-            </Badge>
           </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            This promotion is valid across all official branches and outlets of {merchant} throughout Sri Lanka.
-          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed">{t('offer.nationwideNote')}</p>
           {offer.merchant_location && (
             <div className="mt-2.5 rounded-md bg-muted/30 p-2.5 text-xs text-muted-foreground">
               <p className="font-medium text-foreground mb-0.5">Participating Outlets:</p>

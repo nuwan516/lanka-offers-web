@@ -6,34 +6,34 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { OfferGridSkeleton } from '@/components/shared/skeletons'
 import { ErrorState } from '@/components/shared/error-state'
 import { EmptyState } from '@/components/shared/empty-state'
 import { BankBadge } from '@/components/shared/bank-badge'
+import { DiscountLabel } from '@/components/shared/discount-badge'
 import { useI18n } from '@/i18n'
 import { useLocation } from '@/hooks/use-location'
 import { fetchNearbyOffers } from '@/services/api/offers'
 import {
-  getMerchantName,
-  formatDistance,
-  formatDiscount,
   cleanLocationText,
+  decodeHtmlEntities,
+  formatDistance,
+  getAreaOnlyLabel,
+  getMerchantName,
+  hasConfirmedBranch,
 } from '@/lib/offers'
-
+import { cn } from '@/lib/utils'
 import type { Offer } from '@/types'
 
-const OfferMap = dynamic(
-  () => import('@/components/shared/offer-map').then((m) => m.OfferMap),
-  { ssr: false }
-)
+const OfferMap = dynamic(() => import('@/components/shared/offer-map').then((m) => m.OfferMap), {
+  ssr: false,
+})
 
 const PRESET_CITIES = [
   { name: 'Colombo', lat: 6.9271, lng: 79.8612 },
   { name: 'Kandy', lat: 7.2906, lng: 80.6337 },
-  { name: 'Galle', lat: 6.0535, lng: 80.2210 },
+  { name: 'Galle', lat: 6.0535, lng: 80.221 },
   { name: 'Negombo', lat: 7.2008, lng: 79.8737 },
   { name: 'Kurunegala', lat: 7.4863, lng: 80.3623 },
 ]
@@ -50,129 +50,121 @@ export function NearbyPage() {
   const [view, setView] = useState<'list' | 'map'>('list')
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null)
   const [searchFilter, setSearchFilter] = useState('')
+  const [nonce, setNonce] = useState(0)
 
   const [offers, setOffers] = useState<Offer[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  // Current active coordinates
-  const activeLocation = useGps && gpsLocation ? gpsLocation : { lat: selectedCity.lat, lng: selectedCity.lng }
-  const locationLabel = useGps && gpsLocation ? 'Your Location (GPS)' : selectedCity.name
+  const gpsActive = useGps && !!gpsLocation
+  const activeLocation = gpsActive ? gpsLocation : { lat: selectedCity.lat, lng: selectedCity.lng }
+  const place = gpsActive ? t('nearby.yourLocation') : selectedCity.name
+  const { lat, lng } = activeLocation
 
   useEffect(() => {
-    let cancelled = false
+    const controller = new AbortController()
     setLoading(true)
     setError(null)
 
-    fetchNearbyOffers({
-      lat: activeLocation.lat,
-      lng: activeLocation.lng,
-      radius,
-      search: searchFilter.trim() || undefined,
-      limit: 100,
-    })
+    // Coordinates are sent to the API only to compute distances; nothing is stored client-side.
+    fetchNearbyOffers(
+      { lat, lng, radius, search: searchFilter.trim() || undefined, limit: 100 },
+      controller.signal
+    )
       .then((data) => {
-        if (cancelled) return
-        setOffers(data)
+        // Confirmed branches nearest-first; area-only offers last (their distance is to a town centre).
+        const rank = (o: Offer) =>
+          hasConfirmedBranch(o) ? (o.distance_km ?? Number.MAX_VALUE / 2) : Number.MAX_VALUE
+        setOffers([...data].sort((a, b) => rank(a) - rank(b)))
         setLoading(false)
       })
       .catch((err: Error) => {
-        if (cancelled) return
+        if (controller.signal.aborted) return
         setError(err)
         setLoading(false)
       })
 
-    return () => {
-      cancelled = true
-    }
-  }, [activeLocation.lat, activeLocation.lng, radius, searchFilter])
+    return () => controller.abort()
+  }, [lat, lng, radius, searchFilter, nonce])
 
   const handleUseGps = () => {
     setUseGps(true)
     requestLocation()
   }
 
-  const handleSelectCity = (city: typeof PRESET_CITIES[0]) => {
-    setUseGps(false)
-    setSelectedCity(city)
-  }
-
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
-      {/* Header */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('nearby.title')}</h1>
-          <p className="text-sm text-muted-foreground">
-            Explore active bank promotions sorted by proximity to {locationLabel}
-          </p>
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight">{t('nearby.title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('nearby.subtitle', { place })}</p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1 rounded-lg border p-0.5 bg-card">
+        <div className="flex shrink-0 gap-1 rounded-lg border bg-card p-0.5" role="group">
+          {(['list', 'map'] as const).map((v) => (
             <Button
-              variant={view === 'list' ? 'default' : 'ghost'}
+              key={v}
+              variant={view === v ? 'default' : 'ghost'}
               size="sm"
-              onClick={() => setView('list')}
-              className="gap-1.5 h-8"
+              onClick={() => setView(v)}
+              aria-pressed={view === v}
+              className="h-8 gap-1.5"
             >
-              <List className="size-3.5" />
-              {t('nearby.viewList')}
+              {v === 'list' ? (
+                <List className="size-3.5" aria-hidden="true" />
+              ) : (
+                <MapIcon className="size-3.5" aria-hidden="true" />
+              )}
+              {t(v === 'list' ? 'nearby.viewList' : 'nearby.viewMap')}
             </Button>
-            <Button
-              variant={view === 'map' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setView('map')}
-              className="gap-1.5 h-8"
-            >
-              <MapIcon className="size-3.5" />
-              {t('nearby.viewMap')}
-            </Button>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Location Bar & City Selector */}
-      <Card className="mb-6 p-4">
+      <section aria-label={t('nearby.title')} className="mb-6 space-y-4 rounded-lg border bg-card p-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          {/* City / GPS Picker */}
           <div className="flex flex-wrap items-center gap-2">
             <Button
-              variant={useGps ? 'default' : 'outline'}
+              variant={gpsActive ? 'default' : 'outline'}
               size="sm"
               onClick={handleUseGps}
-              className="gap-1.5 text-xs h-8"
+              className="gap-1.5"
             >
-              <Crosshair className="size-3.5" />
-              {permission === 'requesting' ? t('nearby.requesting') : 'Current GPS'}
+              <Crosshair className="size-3.5" aria-hidden="true" />
+              {permission === 'requesting' ? t('nearby.requesting') : t('nearby.gps')}
             </Button>
-
-            <span className="text-xs text-muted-foreground mx-1">or</span>
-
-            {PRESET_CITIES.map((city) => (
-              <Button
-                key={city.name}
-                variant={!useGps && selectedCity.name === city.name ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => handleSelectCity(city)}
-                className={`text-xs h-8 ${!useGps && selectedCity.name === city.name ? 'font-semibold border' : ''}`}
-              >
-                {city.name}
-              </Button>
-            ))}
+            <span className="text-xs text-muted-foreground">{t('nearby.or')}</span>
+            {PRESET_CITIES.map((city) => {
+              const active = !gpsActive && selectedCity.name === city.name
+              return (
+                <Button
+                  key={city.name}
+                  variant={active ? 'secondary' : 'ghost'}
+                  size="sm"
+                  aria-pressed={active}
+                  onClick={() => {
+                    setUseGps(false)
+                    setSelectedCity(city)
+                  }}
+                  className={cn(active && 'border font-semibold')}
+                >
+                  {city.name}
+                </Button>
+              )
+            })}
           </div>
 
-          {/* Radius selector */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">Radius:</span>
+            <span className="text-xs whitespace-nowrap text-muted-foreground">{t('nearby.radius')}</span>
             <div className="flex gap-1">
               {RADIUS_OPTIONS.map((r) => (
                 <Button
                   key={r}
                   variant={radius === r ? 'default' : 'outline'}
                   size="sm"
+                  aria-pressed={radius === r}
                   onClick={() => setRadius(r)}
-                  className="text-xs h-7 px-2.5"
+                  className="h-8 px-2.5 text-xs"
                 >
                   {r} km
                 </Button>
@@ -181,70 +173,71 @@ export function NearbyPage() {
           </div>
         </div>
 
-        {/* Permission status message if denied/unavailable */}
         {useGps && permission === 'denied' && (
-          <p className="mt-3 text-xs text-destructive">
+          <p role="alert" className="text-sm text-destructive">
             {t('nearby.denied')}
           </p>
         )}
         {useGps && permission === 'unavailable' && (
-          <p className="mt-3 text-xs text-destructive">
+          <p role="alert" className="text-sm text-destructive">
             {t('nearby.unavailable')}
           </p>
         )}
 
-        {/* Search filter within nearby results */}
-        <div className="relative mt-3 pt-3 border-t">
-          <Search className="absolute left-3 top-5 size-4 text-muted-foreground" />
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
           <Input
-            placeholder="Filter nearby offers by merchant or keyword..."
+            type="search"
+            placeholder={t('nearby.filterPlaceholder')}
+            aria-label={t('nearby.filterPlaceholder')}
             value={searchFilter}
             onChange={(e) => setSearchFilter(e.target.value)}
-            className="pl-9 h-9 text-xs"
+            className="h-9 pl-9"
           />
         </div>
-      </Card>
+        <p className="text-xs text-muted-foreground">{t('nearby.permissionHint')}</p>
+      </section>
 
-      {/* Content */}
       {loading ? (
         <OfferGridSkeleton />
       ) : error ? (
-        <ErrorState onRetry={() => setRadius(radius)} />
+        <ErrorState onRetry={() => setNonce((n) => n + 1)} />
       ) : offers.length === 0 ? (
-        <EmptyState
-          title={t('nearby.noNearby')}
-          hint={`Try expanding your search radius beyond ${radius} km or selecting another city.`}
-        />
+        <EmptyState title={t('nearby.noNearby')} hint={t('nearby.emptyHint')} />
       ) : view === 'map' ? (
-        <div className="space-y-4">
-          <div className="h-[550px] overflow-hidden rounded-lg border shadow-sm">
-            <Suspense
-              fallback={
-                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                  {t('common.loading')}
-                </div>
-              }
-            >
-              <OfferMap
-                offers={offers}
-                userLocation={activeLocation}
-                className="h-full w-full"
-                selectedOfferId={selectedOfferId}
-                onSelectOffer={setSelectedOfferId}
-              />
-            </Suspense>
-          </div>
+        <div className="h-[32rem] overflow-hidden rounded-lg border">
+          <Suspense
+            fallback={
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                {t('common.loading')}
+              </div>
+            }
+          >
+            <OfferMap
+              offers={offers}
+              userLocation={activeLocation}
+              className="h-full w-full"
+              selectedOfferId={selectedOfferId}
+              onSelectOffer={setSelectedOfferId}
+            />
+          </Suspense>
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="flex items-center justify-between text-xs text-muted-foreground pb-1">
-            <span>Found {offers.length} offers within {radius} km of {locationLabel}</span>
-            <span>Sorted by nearest first</span>
-          </div>
-
-          {offers.map((offer) => (
-            <NearbyOfferRow key={offer.id} offer={offer} />
-          ))}
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            {t('nearby.found', { count: offers.length, radius })}
+          </p>
+          <ul className="space-y-3">
+            {offers.map((offer) => (
+              <li key={offer.id}>
+                <NearbyOfferRow offer={offer} />
+              </li>
+            ))}
+          </ul>
+          <p className="pt-2 text-xs text-muted-foreground">{t('nearby.approxNote')}</p>
         </div>
       )}
     </div>
@@ -254,48 +247,48 @@ export function NearbyPage() {
 function NearbyOfferRow({ offer }: { offer: Offer }) {
   const { t } = useI18n()
   const merchant = getMerchantName(offer)
-  const discount = formatDiscount(offer.discount_percentage)
-  const branchAddress = offer.geo_locations?.[0]?.address || offer.geo_locations?.[0]?.name || offer.merchant_location
+  const branch = offer.matched_branch_name || offer.geo_locations?.[0]?.name
+  const address =
+    offer.matched_branch_address || offer.geo_locations?.[0]?.address || offer.merchant_location
+  const areaOnly = getAreaOnlyLabel(offer)
+  // A distance to a town centre is not a distance to a branch.
+  const hasDistance =
+    offer.distance_km !== undefined && offer.distance_km !== null && hasConfirmedBranch(offer)
 
   return (
-    <Card className="flex items-center gap-4 p-4 transition-all duration-200 hover:shadow-md hover:border-primary/40">
-      <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-        <MapPin className="size-5" />
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="truncate font-semibold text-foreground text-sm">{merchant}</p>
+    <article className="grid grid-cols-[1fr_auto] items-start gap-x-3 gap-y-2 rounded-lg border bg-card p-4 transition-colors hover:border-primary/40">
+      <div className="min-w-0 space-y-1">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h3 className="min-w-0 truncate text-base font-semibold">{merchant}</h3>
           {offer.bank && <BankBadge bankName={offer.bank} />}
         </div>
-
-        <p className="truncate text-xs text-muted-foreground mt-0.5">{offer.title}</p>
-
-        {branchAddress && (
-          <p className="truncate text-[11px] text-muted-foreground flex items-center gap-1 mt-1">
-            <span className="text-primary font-medium">📍</span>
-            <span className="truncate">{cleanLocationText(branchAddress)}</span>
+        <p className="line-clamp-2 text-sm text-muted-foreground">{decodeHtmlEntities(offer.title)}</p>
+        {areaOnly ? (
+          <p className="flex items-start gap-1 text-xs text-muted-foreground">
+            <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+            <span className="min-w-0 break-words">{t('location.areaOnly', { area: areaOnly })}</span>
+          </p>
+        ) : (branch || address) && (
+          <p className="flex items-start gap-1 text-xs text-muted-foreground">
+            <MapPin className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden="true" />
+            <span className="min-w-0 break-words">
+              {[branch, address && cleanLocationText(address)].filter(Boolean).join(' · ')}
+            </span>
           </p>
         )}
-
-        {discount && (
-          <p className="text-xs font-semibold text-primary mt-1">
-            {discount} {t('offer.discountOff')}
-          </p>
-        )}
+        <DiscountLabel offer={offer} className="pt-1 text-base" />
       </div>
 
-      <div className="shrink-0 text-right flex flex-col items-end gap-1.5">
-        {offer.distance_km !== undefined && offer.distance_km !== null && (
-          <Badge variant="outline" className="text-xs font-semibold text-primary border-primary/30 bg-primary/5">
-            {formatDistance(offer.distance_km)}
-          </Badge>
+      <div className="flex flex-col items-end gap-2">
+        {hasDistance && (
+          <span className="rounded-full bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary">
+            {formatDistance(offer.distance_km as number)}
+          </span>
         )}
-        <Button variant="outline" size="sm" asChild className="h-7 text-xs">
+        <Button variant="outline" size="sm" asChild>
           <Link href={`/offers/${offer.id}`}>{t('offer.viewOffer')}</Link>
         </Button>
       </div>
-    </Card>
+    </article>
   )
 }
-

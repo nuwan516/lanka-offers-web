@@ -50,6 +50,8 @@ export interface Offer {
   db_status?: OfferStatus
   description?: string
   distance_km?: number
+  matched_branch_name?: string | null
+  matched_branch_address?: string | null
   terms?: string
   image_url?: string
 }
@@ -80,6 +82,7 @@ export interface Bank {
   code?: string
   logo_url?: string
   slug?: string
+  activeOfferCount?: number
 }
 
 export interface ApiError {

@@ -6,6 +6,8 @@ const apiTarget =
   'https://api.lanka-offers.me'
 
 const nextConfig = {
+  // The e2e suite builds into its own directory so it never disturbs a dev build.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   reactStrictMode: true,
   images: {
     unoptimized: true,
