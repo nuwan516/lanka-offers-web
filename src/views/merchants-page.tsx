@@ -16,7 +16,8 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { BankBadge } from '@/components/shared/bank-badge'
 import { useI18n } from '@/i18n'
 import { useReferenceData } from '@/hooks/use-reference-data'
-import { useOffers } from '@/hooks/use-offers'
+import { usePagedOffers } from '@/hooks/use-paged-offers'
+import { LoadMore } from '@/components/shared/load-more'
 import { fetchMerchant } from '@/services/api/merchants'
 import type { Merchant } from '@/types'
 
@@ -144,7 +145,7 @@ export function MerchantDetailPage({ params }: { params?: { merchant?: string } 
   const [merchantInfo, setMerchantInfo] = useState<Merchant | null>(null)
 
   // Fetch offers strictly filtered for this merchant from the backend
-  const { offers, loading, error, refetch } = useOffers({
+  const { offers, loading, error, refetch, total, hasMore, loadingMore, moreError, loadMore } = usePagedOffers({
     merchant: decoded,
   })
 
@@ -198,7 +199,7 @@ export function MerchantDetailPage({ params }: { params?: { merchant?: string } 
 
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="text-xs px-3 py-1 font-medium bg-muted/40">
-              {offers.length} {offers.length === 1 ? 'Active Offer' : 'Active Offers'}
+              {loading ? '…' : total} {total === 1 ? 'Active Offer' : 'Active Offers'}
             </Badge>
           </div>
         </div>
@@ -230,11 +231,21 @@ export function MerchantDetailPage({ params }: { params?: { merchant?: string } 
           onAction={() => window.location.href = '/merchants'}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {offers.map((offer) => (
-            <OfferCard key={offer.id} offer={offer} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {offers.map((offer) => (
+              <OfferCard key={offer.id} offer={offer} />
+            ))}
+          </div>
+          <LoadMore
+            shown={offers.length}
+            total={total}
+            hasMore={hasMore}
+            loading={loadingMore}
+            error={!!moreError}
+            onLoadMore={loadMore}
+          />
+        </>
       )}
     </div>
   )

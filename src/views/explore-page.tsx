@@ -11,14 +11,17 @@ import { OfferCard } from '@/components/shared/offer-card'
 import { OfferGridSkeleton } from '@/components/shared/skeletons'
 import { ErrorState } from '@/components/shared/error-state'
 import { EmptyState } from '@/components/shared/empty-state'
+import { LoadMore } from '@/components/shared/load-more'
 import { SearchInput } from '@/components/shared/search-input'
 import { useI18n } from '@/i18n'
+import { useCategories } from '@/hooks/use-categories'
 import { useOffers } from '@/hooks/use-offers'
+import { PAGE_SIZE, usePagedOffers } from '@/hooks/use-paged-offers'
 import { BANKS, getBankName } from '@/lib/banks'
-import { deriveCardTypes, deriveCategories, filterOffers, isExpired, sortOffers } from '@/lib/offers'
+import { filterOffers, isExpired, sortOffers } from '@/lib/offers'
 
-const PAGE_SIZE = 24
 const SORTS = ['newest', 'discount', 'endingSoon'] as const
+const CARD_TYPES = ['Credit Card', 'Debit Card']
 
 export function ExplorePage() {
   const { t } = useI18n()
@@ -35,24 +38,39 @@ export function ExplorePage() {
   const sortParam = searchParams?.get('sortBy') || 'newest'
   const sortBy = (SORTS as readonly string[]).includes(sortParam) ? sortParam : 'newest'
 
-  // Bank, category and search are filtered by the API; card type and sort are applied here
-  // over the full result set so counts and ordering are never based on a partial page.
-  const { offers, loading, error, refetch } = useOffers({
+  // The API filters by bank, category and search and returns newest first, one page at a time.
+  // Sorting by discount or end date, and filtering by card type, need every offer, so those
+  // switch to loading the full set and working on it here.
+  const needsAll = sortBy !== 'newest' || cardType !== ''
+  const query = {
     bank: bank || undefined,
     category: category || undefined,
     search: search || undefined,
-  })
-
-  const live = useMemo(() => offers.filter((o) => !isExpired(o.valid_to)), [offers])
-  const categories = useMemo(() => deriveCategories(live), [live])
-  const cardTypes = useMemo(() => deriveCardTypes(live), [live])
-
-  const filtered = useMemo(
-    () => sortOffers(filterOffers(live, { cardType }), sortBy),
-    [live, cardType, sortBy]
-  )
+  }
+  const paged = usePagedOffers(query, { enabled: !needsAll })
+  const all = useOffers(query, needsAll)
+  const categories = useCategories()
 
   useEffect(() => setVisible(PAGE_SIZE), [bank, search, category, cardType, sortBy])
+
+  const allMatches = useMemo(
+    () =>
+      sortOffers(
+        filterOffers(
+          all.offers.filter((o) => !isExpired(o.valid_to)),
+          { cardType }
+        ),
+        sortBy
+      ),
+    [all.offers, cardType, sortBy]
+  )
+  const pagedLive = useMemo(() => paged.offers.filter((o) => !isExpired(o.valid_to)), [paged.offers])
+
+  const loading = needsAll ? all.loading : paged.loading
+  const error = needsAll ? all.error : paged.error
+  const refetch = needsAll ? all.refetch : paged.refetch
+  const list = needsAll ? allMatches.slice(0, visible) : pagedLive
+  const matchCount = needsAll ? allMatches.length : paged.total
 
   const updateParam = (key: string, value: string) => {
     const next = new URLSearchParams(searchParams ? searchParams.toString() : '')
@@ -92,7 +110,7 @@ export function ExplorePage() {
         allLabel={t('filters.allCardTypes')}
         value={cardType}
         onChange={(v) => updateParam('cardType', v)}
-        options={cardTypes.map((c) => ({ value: c, label: c }))}
+        options={CARD_TYPES.map((c) => ({ value: c, label: c }))}
       />
       {chips.length > 0 && (
         <Button variant="outline" size="sm" onClick={clearFilters} className="w-full">
@@ -109,7 +127,7 @@ export function ExplorePage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{t('nav.explore')}</h1>
           <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
-            {loading ? t('common.loading') : t('search.results', { count: filtered.length })}
+            {loading ? t('common.loading') : t('search.results', { count: matchCount })}
           </p>
         </div>
 
@@ -173,7 +191,7 @@ export function ExplorePage() {
             <OfferGridSkeleton count={9} />
           ) : error ? (
             <ErrorState onRetry={refetch} />
-          ) : filtered.length === 0 ? (
+          ) : list.length === 0 ? (
             <EmptyState
               title={t('search.noResults')}
               hint={t('search.noResultsHint')}
@@ -183,19 +201,26 @@ export function ExplorePage() {
           ) : (
             <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {filtered.slice(0, visible).map((offer) => (
+                {list.map((offer) => (
                   <OfferCard key={offer.id} offer={offer} />
                 ))}
               </div>
-              {visible < filtered.length && (
-                <div className="mt-8 flex flex-col items-center gap-2">
-                  <p className="text-sm text-muted-foreground">
-                    {t('explore.showing', { count: visible, total: filtered.length })}
-                  </p>
-                  <Button variant="outline" onClick={() => setVisible((v) => v + PAGE_SIZE)}>
-                    {t('common.loadMore')}
-                  </Button>
-                </div>
+              {needsAll ? (
+                <LoadMore
+                  shown={list.length}
+                  total={allMatches.length}
+                  hasMore={visible < allMatches.length}
+                  onLoadMore={() => setVisible((v) => v + PAGE_SIZE)}
+                />
+              ) : (
+                <LoadMore
+                  shown={paged.offers.length}
+                  total={paged.total}
+                  hasMore={paged.hasMore}
+                  loading={paged.loadingMore}
+                  error={!!paged.moreError}
+                  onLoadMore={paged.loadMore}
+                />
               )}
             </>
           )}

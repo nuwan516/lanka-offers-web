@@ -162,5 +162,7 @@
   "location.areaOnly": "Area only: {area}",
   "offer.areaOnlyNote": "The bank gave only an area, not a branch address, so no map pin is shown.",
   "offer.onlineNote": "The bank lists this as an online offer. Check the terms for how to claim it.",
-  "offer.nationwideNote": "The bank lists this as an island-wide offer. It does not confirm which outlets take part, so check the terms."
+  "offer.nationwideNote": "The bank lists this as an island-wide offer. It does not confirm which outlets take part, so check the terms.",
+  "explore.loadMoreFailed": "Couldn’t load more offers",
+  "home.latest": "Latest offers"
 }

@@ -11,10 +11,11 @@ import { OfferCard } from '@/components/shared/offer-card'
 import { OfferGridSkeleton } from '@/components/shared/skeletons'
 import { ErrorState } from '@/components/shared/error-state'
 import { useI18n } from '@/i18n'
-import { useOffers } from '@/hooks/use-offers'
+import { useCategories } from '@/hooks/use-categories'
+import { usePagedOffers } from '@/hooks/use-paged-offers'
 import { useReferenceData } from '@/hooks/use-reference-data'
 import { BANKS } from '@/lib/banks'
-import { deriveCategories, isEndingSoon, isExpired, sortOffers } from '@/lib/offers'
+import { isExpired } from '@/lib/offers'
 import { cn } from '@/lib/utils'
 
 export function HomePage() {
@@ -22,16 +23,14 @@ export function HomePage() {
   const router = useRouter()
   const [search, setSearch] = useState('')
 
-  const { offers, loading, error, refetch } = useOffers()
+  // Home only needs the newest few offers, so it fetches a single small page, not the whole catalogue.
+  const { offers, loading, error, refetch } = usePagedOffers({}, { pageSize: 12 })
+  const allCategories = useCategories()
   const { banks } = useReferenceData()
 
   const live = useMemo(() => offers.filter((o) => !isExpired(o.valid_to)), [offers])
-  const topDiscounts = useMemo(() => sortOffers(live, 'discount').slice(0, 8), [live])
-  const endingSoon = useMemo(
-    () => sortOffers(live.filter((o) => isEndingSoon(o.valid_to)), 'endingSoon').slice(0, 4),
-    [live]
-  )
-  const categories = useMemo(() => deriveCategories(live).filter((c) => c.toLowerCase() !== 'all').slice(0, 10), [live])
+  const latest = useMemo(() => live.slice(0, 8), [live])
+  const categories = useMemo(() => allCategories.slice(0, 10), [allCategories])
 
   // The ten supported banks, with live counts from the API where available.
   const bankRows = useMemo(() => {
@@ -140,30 +139,16 @@ export function HomePage() {
       </section>
 
       <OfferSection
-        title={t('offer.featured')}
-        offers={topDiscounts}
+        title={t('home.latest')}
+        offers={latest}
         loading={loading}
         error={error}
         onRetry={refetch}
         emptyTitle={t('search.noResults')}
         emptyHint={t('search.noResultsHint')}
         viewAll={t('common.viewAll')}
-        href="/explore?sortBy=discount"
+        href="/explore"
       />
-
-      {endingSoon.length > 0 && (
-        <OfferSection
-          title={t('offer.endingSoon')}
-          offers={endingSoon}
-          loading={false}
-          error={null}
-          onRetry={refetch}
-          emptyTitle=""
-          emptyHint=""
-          viewAll={t('common.viewAll')}
-          href="/explore?sortBy=endingSoon"
-        />
-      )}
 
       <section aria-labelledby="guide-heading" className="space-y-4 rounded-lg border bg-surface p-5 sm:p-6">
         <h2 id="guide-heading" className="text-lg font-semibold tracking-tight">

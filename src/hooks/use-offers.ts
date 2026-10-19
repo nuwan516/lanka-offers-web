@@ -10,14 +10,22 @@ interface UseOffersState {
   refetch: () => void
 }
 
-export function useOffers(query: OffersQuery = {}): UseOffersState {
+/**
+ * Every offer matching the query (all server pages). Prefer `usePagedOffers` for lists;
+ * use this only where the whole set is needed, such as sorting by a field the API cannot sort on.
+ */
+export function useOffers(query: OffersQuery = {}, enabled = true): UseOffersState {
   const [offers, setOffers] = React.useState<Offer[]>([])
-  const [loading, setLoading] = React.useState(true)
+  const [loading, setLoading] = React.useState(enabled)
   const [error, setError] = React.useState<Error | null>(null)
   const [nonce, setNonce] = React.useState(0)
   const queryKey = JSON.stringify(query)
 
   React.useEffect(() => {
+    if (!enabled) {
+      setLoading(false)
+      return
+    }
     const controller = new AbortController()
     setLoading(true)
     setError(null)
@@ -34,7 +42,7 @@ export function useOffers(query: OffersQuery = {}): UseOffersState {
       })
 
     return () => controller.abort()
-  }, [queryKey, nonce])
+  }, [queryKey, nonce, enabled])
 
   const refetch = React.useCallback(() => setNonce((n) => n + 1), [])
 

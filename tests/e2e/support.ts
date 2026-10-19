@@ -79,6 +79,30 @@ export const NEARBY: Json[] = [
   }),
 ]
 
+/** n distinct live offers, newest first, for paging tests. */
+export function manyOffers(n: number): Json[] {
+  return Array.from({ length: n }, (_, i) => {
+    const num = String(i + 1).padStart(3, '0')
+    return offer({
+      id: `p-${num}`,
+      unique_id: `hnb_paged-${num}`,
+      title: `Paged Merchant ${num} – 10% Off – Credit`,
+      merchant_name: `Paged Merchant ${num}`,
+      discount_percentage: String(10 + (i % 40)),
+      geo_locations: [],
+      location_scope: 'ONLINE',
+    })
+  })
+}
+
+export const MERCHANTS = [
+  { name: 'Pizza Hut', category: 'Dining', offer_count: 1, banks: ['hnb'] },
+  { name: 'Keells', category: 'Supermarket', offer_count: 1, banks: ['hnb'] },
+  { name: 'Oak Ray', category: 'Leisure', offer_count: 1, banks: ['boc'] },
+  { name: 'Cafe Two', category: 'Dining', offer_count: 1, banks: ['hnb'] },
+  { name: 'Anything', category: 'All', offer_count: 1, banks: ['hnb'] },
+]
+
 export const BANKS = [
   { code: 'hnb', name: 'Hatton National Bank', cardTypesSupported: ['credit', 'debit'], activeOfferCount: 3 },
   { code: 'boc', name: 'Bank of Ceylon', cardTypesSupported: ['credit', 'debit'], activeOfferCount: 1 },
@@ -93,6 +117,13 @@ export interface ApiState {
   banks: Json[]
   /** When set, /api/offers fails with this status until cleared. */
   offersStatus: number | null
+  merchants: Json[]
+  /** When set, a page at exactly this offset fails with 500 until cleared. */
+  failOffset: number | null
+  /** Repeat this many rows at the start of every page after the first (unstable ordering). */
+  overlap: number
+  /** Simulate an API bug that returns expired offers in lists. */
+  leakExpired: boolean
   requests: URL[]
   external: string[]
 }
@@ -108,7 +139,7 @@ function fulfillJson(route: Route, body: unknown, status = 200) {
 
 export async function installApi(page: Page, init: Partial<ApiState> = {}): Promise<ApiState> {
   const state: ApiState = {
-    offers: OFFERS, nearby: NEARBY, banks: BANKS, offersStatus: null, requests: [], external: [], ...init,
+    offers: OFFERS, nearby: NEARBY, banks: BANKS, offersStatus: null, merchants: MERCHANTS, failOffset: null, overlap: 0, leakExpired: false, requests: [], external: [], ...init,
   }
   const origin = `http://127.0.0.1:${process.env.E2E_PORT ?? 5180}`
 
@@ -143,7 +174,7 @@ function handleApi(route: Route, url: URL, state: ApiState) {
   const q = url.searchParams
 
   if (path === '/api/banks') return fulfillJson(route, state.banks)
-  if (path === '/api/merchants') return fulfillJson(route, [])
+  if (path === '/api/merchants') return fulfillJson(route, state.merchants)
 
   if (path === '/api/offers/nearby') {
     return fulfillJson(route, { items: state.nearby, total: state.nearby.length, limit: 100, offset: 0 })
@@ -151,7 +182,8 @@ function handleApi(route: Route, url: URL, state: ApiState) {
 
   if (path === '/api/offers') {
     if (state.offersStatus) return fulfillJson(route, { error: 'boom' }, state.offersStatus)
-    let items = state.offers
+    // Like the real API: published and unexpired only.
+    let items = state.leakExpired ? state.offers : state.offers.filter((o) => String(o.valid_to ?? '9999') >= new Date().toISOString())
     const bank = q.get('bank')
     const search = q.get('search')?.toLowerCase()
     const scope = q.get('locationScope')
@@ -164,7 +196,9 @@ function handleApi(route: Route, url: URL, state: ApiState) {
     }
     const limit = Number(q.get('limit') ?? 50)
     const offset = Number(q.get('offset') ?? 0)
-    return fulfillJson(route, { items: items.slice(offset, offset + limit), total: items.length, limit, offset })
+    if (state.failOffset !== null && offset === state.failOffset) return fulfillJson(route, { error: 'page failed' }, 500)
+    const start = offset > 0 ? Math.max(0, offset - state.overlap) : 0
+    return fulfillJson(route, { items: items.slice(start, start + limit), total: items.length, limit, offset })
   }
 
   const detail = path.match(/^\/api\/offers\/([^/]+)$/)

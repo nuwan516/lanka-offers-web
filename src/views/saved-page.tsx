@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { OfferCard } from '@/components/shared/offer-card'
@@ -9,18 +9,44 @@ import { ErrorState } from '@/components/shared/error-state'
 import { EmptyState } from '@/components/shared/empty-state'
 import { useI18n } from '@/i18n'
 import { useSavedOffers } from '@/hooks/use-saved-offers'
-import { useOffers } from '@/hooks/use-offers'
+import { fetchOffersByIds } from '@/services/api/offers'
+import { isExpired } from '@/lib/offers'
+import type { Offer } from '@/types'
 
 export function SavedPage() {
   const { t } = useI18n()
   const router = useRouter()
   const { savedIds } = useSavedOffers()
-  const { offers, loading, error, refetch } = useOffers()
+  const [savedOffers, setSavedOffers] = useState<Offer[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+  const [nonce, setNonce] = useState(0)
+  const refetch = () => setNonce((n) => n + 1)
+  const idsKey = savedIds.join(',')
 
-
-  const savedOffers = useMemo(() => {
-    return offers.filter((o) => savedIds.includes(o.id))
-  }, [offers, savedIds])
+  // Fetch only the saved offers by id; the whole catalogue is not loaded to find them.
+  useEffect(() => {
+    const ids = idsKey ? idsKey.split(',') : []
+    if (ids.length === 0) {
+      setSavedOffers([])
+      setLoading(false)
+      return
+    }
+    const controller = new AbortController()
+    setLoading(true)
+    setError(null)
+    fetchOffersByIds(ids, controller.signal)
+      .then((offers) => {
+        setSavedOffers(offers.filter((o) => !isExpired(o.valid_to)))
+        setLoading(false)
+      })
+      .catch((err: Error) => {
+        if (controller.signal.aborted) return
+        setError(err)
+        setLoading(false)
+      })
+    return () => controller.abort()
+  }, [idsKey, nonce])
 
   if (loading) {
     return (
