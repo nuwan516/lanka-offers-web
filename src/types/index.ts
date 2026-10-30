@@ -54,6 +54,12 @@ export interface Offer {
   matched_branch_address?: string | null
   terms?: string
   image_url?: string
+  min_spend?: number | null
+  max_discount?: number | null
+  max_bill_value?: number | null
+  booking_required?: boolean
+  booking_phone?: string | null
+  pdf_terms_url?: string | null
 }
 
 export interface OfferDetail extends Offer {
