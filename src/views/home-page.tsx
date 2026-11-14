@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { OfferCard } from '@/components/shared/offer-card'
+import { OfferCard } from '@/features/offers'
 import { OfferGridSkeleton } from '@/components/shared/skeletons'
 import { ErrorState } from '@/components/shared/error-state'
 import { useI18n } from '@/i18n'

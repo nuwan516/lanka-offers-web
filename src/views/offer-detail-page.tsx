@@ -43,6 +43,7 @@ import {
   cleanLocationText,
 } from '@/lib/offers'
 import type { Offer, OfferDetail } from '@/types'
+import { OfferImage } from '@/features/offers'
 
 
 export function OfferDetailPage({ params }: { params?: { id?: string } }) {
@@ -135,6 +136,7 @@ export function OfferDetailPage({ params }: { params?: { id?: string } }) {
 
       {/* Header */}
       <div className="mb-6 space-y-3">
+        <OfferImage imageUrl={offer.image_url} alt={`${merchant} promotion`} priority />
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-1.5">
             <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">

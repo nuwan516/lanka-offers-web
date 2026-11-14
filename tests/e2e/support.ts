@@ -34,6 +34,7 @@ export function offer(over: Json = {}): Json {
     description: null,
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z',
+    image_url: `/api/images/${'a'.repeat(64)}.png`,
     ...over,
   }
 }
@@ -175,6 +176,14 @@ function handleApi(route: Route, url: URL, state: ApiState) {
 
   if (path === '/api/banks') return fulfillJson(route, state.banks)
   if (path === '/api/merchants') return fulfillJson(route, state.merchants)
+  if (/^\/api\/images\/[a-f0-9]{64}\.(?:jpg|png|gif|webp)$/.test(path)) {
+    return route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      headers: { 'Cache-Control': 'public, max-age=31536000, immutable' },
+      body: PNG_1PX,
+    })
+  }
 
   if (path === '/api/offers/nearby') {
     return fulfillJson(route, { items: state.nearby, total: state.nearby.length, limit: 100, offset: 0 })

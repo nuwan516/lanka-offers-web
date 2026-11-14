@@ -19,6 +19,7 @@ import {
 } from '@/lib/offers'
 import { cn } from '@/lib/utils'
 import type { Offer } from '@/types'
+import { OfferImage } from './offer-image'
 
 interface OfferCardProps {
   offer: Offer
@@ -54,6 +55,7 @@ export function OfferCard({ offer, className }: OfferCardProps) {
         className
       )}
     >
+      <OfferImage imageUrl={offer.image_url} alt={`${merchant} promotion`} />
       <div className="flex items-start justify-between gap-2">
         {offer.bank ? <BankBadge bankName={offer.bank} /> : <span />}
         <button

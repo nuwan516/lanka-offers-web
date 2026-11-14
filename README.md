@@ -6,12 +6,13 @@ Consumer web app for discovering Sri Lankan bank card offers. Next.js 16 (App Ro
 
 Next.js is the only runtime (`next dev` / `next start`, port 5173). The earlier Vite/React Router app was replaced in the Next.js migration; no Vite or React Router code remains.
 
-- `src/app/*` - routes (thin wrappers) and `layout.tsx` (fonts, providers, header/footer).
-- `src/views/*` - page implementations used by the routes.
-- `src/components/shared/*` - offer card, discount label, bank badge, states; `components/ui/*` - the shadcn primitives actually in use.
-- `src/services/api/*` - the only place that talks to the public API (timeouts, abort, typed errors, paging).
-- `src/lib/offers.ts` - offer semantics (discount wording, Colombo-time expiry, location labels); `src/lib/banks.ts` - the ten supported banks.
-- `src/i18n/{en,si,ta}.json` - translations. Every `t()` key must exist in `en.json`; `si`/`ta` must have the same keys.
+- `src/app/*` — App Router routes (thin wrappers) and root `layout.tsx`.
+- `src/views/*` — page bodies used by the route wrappers.
+- `src/features/offers/*` — offer UI (`OfferCard`, `OfferImage`); domain feature modules live here.
+- `src/components/shared/*` — cross-feature UI (badges, states, map); `components/ui/*` — shadcn primitives.
+- `src/services/api/*` — only layer that talks to the public API (timeouts, abort, typed errors, paging).
+- `src/lib/offers.ts` — offer semantics (discount wording, Colombo-time expiry, location labels); `src/lib/banks.ts` — the ten supported banks.
+- `src/i18n/{en,si,ta}.json` — translations. Every `t()` key must exist in `en.json`; `si`/`ta` must have the same keys.
 
 ## Setup
 

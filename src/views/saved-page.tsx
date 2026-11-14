@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-import { OfferCard } from '@/components/shared/offer-card'
+import { OfferCard } from '@/features/offers'
 import { OfferGridSkeleton } from '@/components/shared/skeletons'
 import { ErrorState } from '@/components/shared/error-state'
 import { EmptyState } from '@/components/shared/empty-state'

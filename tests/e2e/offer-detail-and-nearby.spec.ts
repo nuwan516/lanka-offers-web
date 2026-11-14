@@ -1,8 +1,9 @@
-import { test, expect } from './support'
+import { test, expect, offer } from './support'
 
 test.describe('Offer detail', () => {
   test('shows the discount, caveat, validity, eligibility, terms and the original source', async ({ page }) => {
     await page.goto('/offers/o-upto')
+    await expect(page.getByRole('img', { name: 'Oak Ray Colombo City Hotel promotion' })).toBeVisible()
 
     await expect(page.getByText('Up to 35% off').first()).toBeVisible()
     await expect(page.getByText(/Caps, minimum spend and eligible cards are in the terms/)).toBeVisible()
@@ -15,6 +16,46 @@ test.describe('Offer detail', () => {
 
     await expect(page.getByText('30% off').first()).toBeVisible()
     await expect(page.getByText(/Up to 30%/)).toHaveCount(0)
+  })
+
+  test('a failed approved image falls back without breaking the offer detail', async ({ page }) => {
+    await page.route('**/api/images/**', (route) => route.abort())
+    await page.goto('/offers/o-plain')
+
+    await expect(page.getByRole('img', { name: 'Pizza Hut promotion image unavailable' })).toBeVisible()
+    await expect(page.getByText('30% off').first()).toBeVisible()
+  })
+
+  test('renders the captured BOC Chinese Lotus Lux promotion with its approved image contract', async ({ page, api }) => {
+    api.offers.push(
+      offer({
+        id: 'boc-live-chinese-lotus-lux',
+        unique_id: 'boc_chinese-lotus-lux',
+        bank: 'boc',
+        source_url: 'https://www.boc.lk/personal-banking/card-offers/dining/chinese-lotus-lux/product',
+        title: 'Chinese Lotus Lux',
+        merchant_name: 'Chinese Lotus Lux',
+        category: 'Dining',
+        valid_to: '2026-12-31T00:00:00.000Z',
+        image_url: `/api/images/${'1364824905a8df819220448da3411668badc002615ca8602eb3569184c1f29b3'}.jpg`,
+      })
+    )
+    await page.goto('/offers/boc-live-chinese-lotus-lux')
+
+    await expect(page.getByRole('heading', { name: 'Chinese Lotus Lux' })).toBeVisible()
+    await expect(page.getByRole('img', { name: 'Chinese Lotus Lux promotion' })).toBeVisible()
+    await expect(page.getByRole('link', { name: /View official offer/ })).toHaveAttribute('href', /boc\.lk/)
+  })
+
+  test('@mobile keeps the image frame inside the mobile viewport', async ({ page }) => {
+    await page.goto('/offers/o-plain')
+
+    const image = page.getByRole('img', { name: 'Pizza Hut promotion' })
+    await expect(image).toBeVisible()
+    const box = await image.boundingBox()
+    expect(box).not.toBeNull()
+    expect(box!.x).toBeGreaterThanOrEqual(0)
+    expect(box!.x + box!.width).toBeLessThanOrEqual(412)
   })
 
   test('an expired offer says so clearly', async ({ page }) => {
