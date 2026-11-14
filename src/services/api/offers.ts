@@ -91,3 +91,12 @@ export async function fetchNearbyOffers(query: NearbyOffersQuery, signal?: Abort
 export async function fetchOffer(id: string, signal?: AbortSignal): Promise<OfferDetail> {
   return apiFetch<OfferDetail>(`/api/offers/${encodeURIComponent(id)}`, { signal })
 }
+
+/**
+ * Offers by id, for the saved list: one request per saved offer (a few), instead of loading the
+ * whole catalogue to find them. Ids that no longer resolve (expired or removed) are skipped.
+ */
+export async function fetchOffersByIds(ids: string[], signal?: AbortSignal): Promise<Offer[]> {
+  const results = await Promise.allSettled(ids.map((id) => fetchOffer(id, signal)))
+  return results.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []))
+}

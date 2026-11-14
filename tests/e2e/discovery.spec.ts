@@ -15,7 +15,7 @@ test.describe('Home', () => {
     await expect(banks.getByText('No active offers yet').first()).toBeVisible()
   })
 
-  test('highest discounts exclude expired offers', async ({ page }) => {
+  test('latest offers exclude expired offers', async ({ page }) => {
     await page.goto('/')
 
     await expect(page.getByText('Pizza Hut', { exact: true }).first()).toBeVisible()
@@ -90,7 +90,7 @@ test.describe('Explore filters', () => {
     await expect(page.getByRole('heading', { name: 'Pizza Hut' })).toBeVisible()
   })
 
-  test('expired offers returned by the API are not listed', async ({ page }) => {
+  test('expired offers are not listed', async ({ page }) => {
     await page.goto('/explore')
 
     await expect(page.getByRole('heading', { name: 'Pizza Hut' })).toBeVisible()
