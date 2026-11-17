@@ -52,7 +52,9 @@ export function usePagedOffers(query: OffersQuery = {}, { pageSize = PAGE_SIZE, 
     if (!enabled) return
     const controller = new AbortController()
     controllerRef.current = controller
-    setState(EMPTY)
+    // Keep the current rows on screen while the next query loads, so search
+    // and filters don't flash an empty grid. A failure still clears them.
+    setState((s) => ({ ...s, loading: true, error: null, moreError: null, loadingMore: false }))
 
     fetchOffersPage({ ...(JSON.parse(queryKey) as OffersQuery), limit: pageSize, offset: 0 }, controller.signal)
       .then((page) => {

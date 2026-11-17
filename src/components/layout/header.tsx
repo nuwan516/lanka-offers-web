@@ -48,7 +48,7 @@ export function Header() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t('search.placeholder')}
-          className="h-9 bg-surface pl-9"
+          className="h-10 rounded-full bg-surface pl-9"
           aria-label={t('search.placeholder')}
         />
       </div>
@@ -56,22 +56,22 @@ export function Header() {
   )
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur-md">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground"
       >
         {t('nav.skip')}
       </a>
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4">
-        <Link href="/" className="flex shrink-0 items-center gap-2" aria-label={t('app.name')}>
+      <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
+        <Link href="/" className="flex min-w-0 shrink-0 items-center gap-2" aria-label={t('app.name')}>
           <span
             aria-hidden="true"
-            className="inline-flex size-7 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground"
+            className="inline-flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground"
           >
             L
           </span>
-          <span className="text-base font-semibold tracking-tight">{t('app.name')}</span>
+          <span className="truncate text-base font-semibold tracking-tight">{t('app.name')}</span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
@@ -81,7 +81,7 @@ export function Header() {
               href={item.href}
               aria-current={isActive(item.href) ? 'page' : undefined}
               className={cn(
-                'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                'rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
                 isActive(item.href)
                   ? 'bg-primary-soft text-primary'
                   : 'text-muted-foreground hover:bg-accent hover:text-foreground'

@@ -23,8 +23,8 @@ export function ModeToggle() {
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
       aria-label={t('theme.toggle')}
     >
-      <Sun className="size-4 scale-100 dark:scale-0" />
-      <Moon className="absolute size-4 scale-0 dark:scale-100" />
+      <Sun className="size-4 scale-100 dark:scale-0" aria-hidden="true" />
+      <Moon className="absolute size-4 scale-0 dark:scale-100" aria-hidden="true" />
     </Button>
   )
 }

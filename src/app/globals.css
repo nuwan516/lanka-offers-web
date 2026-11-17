@@ -44,7 +44,7 @@
 }
 
 :root {
-  --radius: 0.5rem;
+  --radius: 0.75rem;
   --background: oklch(0.985 0.003 95);
   --surface: oklch(0.965 0.005 95);
   --foreground: oklch(0.21 0.015 200);
@@ -108,6 +108,14 @@
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
     font-feature-settings: "tnum" 0;
+    background-image: radial-gradient(ellipse 90% 42% at 50% -12%, oklch(0.42 0.085 190 / 0.09), transparent);
+  }
+  .dark body {
+    background-image: radial-gradient(ellipse 90% 36% at 50% -12%, oklch(0.74 0.1 185 / 0.1), transparent);
+  }
+  ::selection {
+    background: var(--primary-soft);
+    color: var(--foreground);
   }
   /* Sinhala and Tamil glyphs have tall ascenders/descenders: give them room. */
   html[lang="si"] body,
@@ -121,10 +129,104 @@
   .leaflet-popup-content a {
     color: inherit;
   }
+  .leaflet-popup-content a.offer-popup-link {
+    color: var(--primary-foreground);
+  }
   .leaflet-container {
     font-family: var(--font-sans);
+    background: var(--surface);
+  }
+  .leaflet-popup-content-wrapper,
+  .leaflet-popup-tip {
+    background: var(--card);
+    color: var(--card-foreground);
+  }
+  .leaflet-popup-content-wrapper {
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 28px oklch(0 0 0 / 0.16);
+  }
+  .leaflet-popup-content {
+    margin: 10px 12px;
+  }
+  .leaflet-bar a {
+    background: var(--card);
+    color: var(--foreground);
+    border-color: var(--border);
+  }
+  .offer-pin-wrap,
+  .user-pin-wrap {
+    background: transparent !important;
+    border: none !important;
+  }
+  .offer-pin,
+  .user-pin {
+    display: block;
+    border-radius: 999px;
+    border: 2px solid white;
+  }
+  .offer-pin {
+    width: 16px;
+    height: 16px;
+    margin: 6px;
+    background: var(--primary);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+  }
+  .offer-pin.is-selected {
+    transform: scale(1.4);
+    background: var(--foreground);
+  }
+  .user-pin {
+    width: 14px;
+    height: 14px;
+    background: oklch(0.55 0.14 250);
+    box-shadow: 0 0 0 6px oklch(0.55 0.14 250 / 0.28);
+  }
+  .offer-popup-title {
+    margin: 0 0 4px;
+    font-size: 13px;
+    font-weight: 650;
+  }
+  .offer-popup-discount {
+    margin: 0 0 4px;
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--primary);
+  }
+  .offer-popup-meta {
+    margin: 0 0 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--muted-foreground);
+  }
+  .offer-popup-link {
+    display: block;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--primary);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
   }
 }
+
+/* Identification tints for bank monograms. These are not official brand colours. */
+.bank-tone-0 { background: oklch(0.93 0.035 190); color: oklch(0.34 0.07 190); }
+.bank-tone-1 { background: oklch(0.93 0.03 250); color: oklch(0.34 0.07 250); }
+.bank-tone-2 { background: oklch(0.94 0.03 85); color: oklch(0.38 0.07 70); }
+.bank-tone-3 { background: oklch(0.93 0.03 145); color: oklch(0.34 0.06 150); }
+.bank-tone-4 { background: oklch(0.93 0.03 25); color: oklch(0.38 0.08 25); }
+.bank-tone-5 { background: oklch(0.93 0.03 310); color: oklch(0.36 0.07 310); }
+.bank-tone-6 { background: oklch(0.94 0.025 210); color: oklch(0.34 0.05 220); }
+.bank-tone-7 { background: oklch(0.94 0.03 55); color: oklch(0.38 0.07 55); }
+.dark .bank-tone-0 { background: oklch(0.32 0.04 190); color: oklch(0.9 0.04 190); }
+.dark .bank-tone-1 { background: oklch(0.32 0.04 250); color: oklch(0.9 0.04 250); }
+.dark .bank-tone-2 { background: oklch(0.33 0.04 85); color: oklch(0.92 0.04 90); }
+.dark .bank-tone-3 { background: oklch(0.32 0.04 150); color: oklch(0.9 0.04 150); }
+.dark .bank-tone-4 { background: oklch(0.33 0.05 25); color: oklch(0.92 0.04 25); }
+.dark .bank-tone-5 { background: oklch(0.32 0.04 310); color: oklch(0.92 0.04 310); }
+.dark .bank-tone-6 { background: oklch(0.32 0.03 220); color: oklch(0.9 0.03 220); }
+.dark .bank-tone-7 { background: oklch(0.33 0.04 55); color: oklch(0.92 0.04 70); }
 
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -45,7 +45,7 @@ export default function RootLayout({
           <I18nProvider>
             <div className="flex min-h-svh flex-col">
               <Header />
-              <main id="main" className="flex-1 pb-20 md:pb-0">
+              <main id="main" className="flex-1 scroll-mt-16 pb-24 md:pb-0">
                 {children}
               </main>
               <Footer />

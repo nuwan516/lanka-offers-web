@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { OfferCard } from '@/features/offers'
 import { OfferGridSkeleton } from '@/components/shared/skeletons'
 import { ErrorState } from '@/components/shared/error-state'
+import { BankMonogram } from '@/components/shared/bank-badge'
 import { useI18n } from '@/i18n'
 import { useCategories } from '@/hooks/use-categories'
 import { usePagedOffers } from '@/hooks/use-paged-offers'
@@ -45,51 +46,55 @@ export function HomePage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-12 px-4 py-8 lg:py-12">
-      <section aria-labelledby="home-heading" className="space-y-5">
-        <div className="max-w-2xl space-y-2">
-          <h1 id="home-heading" className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-            {t('app.tagline')}
-          </h1>
-          <p className="text-base text-muted-foreground">{t('app.description')}</p>
-        </div>
-
-        <form onSubmit={handleSearch} role="search" className="flex max-w-2xl gap-2">
-          <div className="relative flex-1">
-            <Search
-              className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <Input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('search.placeholder')}
-              className="h-12 pl-10 text-base"
-              aria-label={t('search.placeholder')}
-            />
+    <div className="mx-auto max-w-6xl space-y-12 px-4 py-6 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500 lg:py-10">
+      <section aria-labelledby="home-heading" className="relative overflow-hidden rounded-2xl border bg-card px-5 py-7 shadow-sm sm:px-8 sm:py-10">
+        <div aria-hidden="true" className="pointer-events-none absolute -top-24 -right-10 size-64 rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative max-w-2xl space-y-5">
+          <p className="text-sm font-medium text-primary">{t('home.eyebrow')}</p>
+          <div className="space-y-2">
+            <h1 id="home-heading" className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+              {t('app.tagline')}
+            </h1>
+            <p className="text-base text-pretty text-muted-foreground">{t('app.description')}</p>
           </div>
-          <Button type="submit" className="h-12 px-6">
-            {t('search.button')}
-          </Button>
-        </form>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/nearby">
-              <MapPin className="size-4" aria-hidden="true" />
-              {t('home.nearbyCta')}
-            </Link>
-          </Button>
-          {categories.slice(0, 6).map((c) => (
-            <Link
-              key={c}
-              href={`/explore?category=${encodeURIComponent(c)}`}
-              className="rounded-full border bg-card px-3 py-1.5 text-sm text-foreground transition-colors hover:border-primary/40 hover:bg-primary-soft"
-            >
-              {c}
-            </Link>
-          ))}
+          <form onSubmit={handleSearch} role="search" className="flex max-w-2xl gap-2">
+            <div className="relative flex-1">
+              <Search
+                className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <Input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t('search.placeholder')}
+                className="h-12 rounded-xl bg-background pl-10 text-base"
+                aria-label={t('search.placeholder')}
+              />
+            </div>
+            <Button type="submit" className="h-12 rounded-xl px-5">
+              {t('search.button')}
+            </Button>
+          </form>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" className="rounded-full" asChild>
+              <Link href="/nearby">
+                <MapPin className="size-4" aria-hidden="true" />
+                {t('home.nearbyCta')}
+              </Link>
+            </Button>
+            {categories.slice(0, 6).map((c) => (
+              <Link
+                key={c}
+                href={`/explore?category=${encodeURIComponent(c)}`}
+                className="rounded-full border bg-background px-3 py-1.5 text-sm text-foreground transition-colors hover:border-primary/40 hover:bg-primary-soft"
+              >
+                {c}
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -102,14 +107,7 @@ export function HomePage() {
             const hasOffers = b.count === undefined || b.count > 0
             const body = (
               <>
-                <span className="flex items-center gap-2">
-                  <span
-                    aria-hidden="true"
-                    className="inline-flex h-6 min-w-9 items-center justify-center rounded-sm bg-primary-soft px-1 text-[11px] font-semibold text-primary"
-                  >
-                    {b.short}
-                  </span>
-                </span>
+                <BankMonogram bankName={b.code} className="h-7 min-w-10 text-[11px]" />
                 <span className="mt-2 block text-sm font-medium leading-snug text-foreground">{b.name}</span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">
                   {b.count === undefined
@@ -125,12 +123,12 @@ export function HomePage() {
                 {hasOffers ? (
                   <Link
                     href={`/explore?bank=${b.code}`}
-                    className="block h-full rounded-lg border bg-card p-3 transition-colors hover:border-primary/40"
+                    className="block h-full rounded-xl border bg-card p-3 shadow-sm transition duration-200 hover:border-primary/40 motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md"
                   >
                     {body}
                   </Link>
                 ) : (
-                  <div className={cn('h-full rounded-lg border border-dashed bg-surface p-3')}>{body}</div>
+                  <div className={cn('h-full rounded-xl border border-dashed bg-surface p-3')}>{body}</div>
                 )}
               </li>
             )
@@ -150,7 +148,7 @@ export function HomePage() {
         href="/explore"
       />
 
-      <section aria-labelledby="guide-heading" className="space-y-4 rounded-lg border bg-surface p-5 sm:p-6">
+      <section aria-labelledby="guide-heading" className="space-y-4 rounded-2xl border bg-surface p-5 sm:p-6">
         <h2 id="guide-heading" className="text-lg font-semibold tracking-tight">
           {t('home.guide.title')}
         </h2>
@@ -158,7 +156,7 @@ export function HomePage() {
           {(['upTo', 'cards', 'dates'] as const).map((k) => (
             <div key={k} className="space-y-1">
               <dt className="text-sm font-semibold">{t(`home.guide.${k}.title`)}</dt>
-              <dd className="text-sm leading-6 text-muted-foreground">{t(`home.guide.${k}.body`)}</dd>
+              <dd className="text-sm leading-6 text-pretty text-muted-foreground">{t(`home.guide.${k}.body`)}</dd>
             </div>
           ))}
         </dl>
@@ -192,7 +190,7 @@ function OfferSection({
 }: OfferSectionProps) {
   return (
     <section aria-label={title} className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
         <Button variant="ghost" size="sm" asChild>
           <Link href={href}>
@@ -201,8 +199,8 @@ function OfferSection({
           </Link>
         </Button>
       </div>
-      {loading ? (
-        <OfferGridSkeleton count={8} />
+      {loading && offers.length === 0 ? (
+        <OfferGridSkeleton count={8} className="lg:grid-cols-4" />
       ) : error ? (
         <ErrorState onRetry={onRetry} />
       ) : offers.length === 0 ? (

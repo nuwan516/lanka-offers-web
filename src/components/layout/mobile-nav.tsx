@@ -19,7 +19,10 @@ export function MobileNav() {
   ]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background md:hidden">
+    <nav
+      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
+      aria-label={t('nav.menu')}
+    >
       <div className="grid grid-cols-4">
         {items.map((item) => {
           const currentPath = pathname || ''
@@ -31,13 +34,21 @@ export function MobileNav() {
             <Link
               key={item.href}
               href={item.href}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors',
-                isActive ? 'text-foreground' : 'text-muted-foreground'
+                'relative flex min-w-0 flex-col items-center gap-0.5 px-1 py-2 text-[11px] font-medium transition-colors',
+                isActive ? 'text-primary' : 'text-muted-foreground'
               )}
             >
-              <item.icon className="size-5" />
-              {item.label}
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'absolute inset-x-3 top-0 h-0.5 rounded-full',
+                  isActive ? 'bg-primary' : 'bg-transparent'
+                )}
+              />
+              <item.icon className="size-5" aria-hidden="true" />
+              <span className="max-w-full truncate">{item.label}</span>
             </Link>
           )
         })}
