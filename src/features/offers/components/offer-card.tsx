@@ -34,7 +34,6 @@ export function OfferCard({ offer, className }: OfferCardProps) {
   const expired = isExpired(offer.valid_to)
   const remaining = daysLeft(offer.valid_to)
   const locationLabel = getConciseLocationLabel(offer)
-  // A distance to a town centre is not a distance to a branch.
   const hasDistance =
     offer.distance_km !== undefined && offer.distance_km !== null && hasConfirmedBranch(offer)
 
@@ -49,13 +48,14 @@ export function OfferCard({ offer, className }: OfferCardProps) {
   return (
     <article
       className={cn(
-        'group relative flex h-full flex-col gap-3 rounded-lg border bg-card p-4 transition-colors',
-        'hover:border-primary/40 focus-within:border-primary/40',
-        expired && 'opacity-70',
+        'group relative flex h-full flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm transition-all duration-200',
+        'hover:border-primary/50 hover:shadow-md focus-within:border-primary/50',
+        expired && 'opacity-60 grayscale-[0.4]',
         className
       )}
     >
       <OfferImage imageUrl={offer.image_url} alt={`${merchant} promotion`} />
+
       <div className="flex items-start justify-between gap-2">
         {offer.bank ? <BankBadge bankName={offer.bank} /> : <span />}
         <button
@@ -69,7 +69,7 @@ export function OfferCard({ offer, className }: OfferCardProps) {
         </button>
       </div>
 
-      <div className="min-w-0 space-y-1">
+      <div className="min-w-0 space-y-1.5">
         <h3 className="truncate text-base font-semibold text-foreground">
           <Link
             href={`/offers/${offer.id}`}
@@ -78,11 +78,15 @@ export function OfferCard({ offer, className }: OfferCardProps) {
             {merchant}
           </Link>
         </h3>
-        <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">{decodeHtmlEntities(offer.title)}</p>
+        <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
+          {decodeHtmlEntities(offer.title)}
+        </p>
       </div>
 
-      <div className="mt-auto space-y-2 border-t pt-3">
-        <DiscountLabel offer={offer} />
+      <div className="mt-auto space-y-2.5 border-t pt-3">
+        <div className="inline-flex rounded-md bg-primary-soft px-2.5 py-1">
+          <DiscountLabel offer={offer} />
+        </div>
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           {hasDistance ? (
@@ -100,8 +104,9 @@ export function OfferCard({ offer, className }: OfferCardProps) {
               <span className="truncate">{locationLabel.text}</span>
             </span>
           ) : null}
-          {offer.card_type && <span>{offer.card_type}</span>}
+          {offer.card_type && <span className="rounded bg-muted px-1.5 py-0.5">{offer.card_type}</span>}
         </div>
+
         {validity && (
           <p
             className={cn(

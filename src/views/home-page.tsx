@@ -23,7 +23,6 @@ export function HomePage() {
   const router = useRouter()
   const [search, setSearch] = useState('')
 
-  // Home only needs the newest few offers, so it fetches a single small page, not the whole catalogue.
   const { offers, loading, error, refetch } = usePagedOffers({}, { pageSize: 12 })
   const allCategories = useCategories()
   const { banks } = useReferenceData()
@@ -32,7 +31,6 @@ export function HomePage() {
   const latest = useMemo(() => live.slice(0, 8), [live])
   const categories = useMemo(() => allCategories.slice(0, 10), [allCategories])
 
-  // The ten supported banks, with live counts from the API where available.
   const bankRows = useMemo(() => {
     const counts = new Map(banks.map((b) => [(b.code ?? b.name).toLowerCase(), b.activeOfferCount]))
     return BANKS.map((b) => ({ ...b, count: counts.get(b.code) }))
@@ -99,21 +97,26 @@ export function HomePage() {
         </h2>
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {bankRows.map((b) => {
-            const hasOffers = b.count === undefined || b.count > 0
+            const hasOffers = (b.count ?? 0) > 0
             const body = (
               <>
                 <span className="flex items-center gap-2">
                   <span
                     aria-hidden="true"
-                    className="inline-flex h-6 min-w-9 items-center justify-center rounded-sm bg-primary-soft px-1 text-[11px] font-semibold text-primary"
+                    className={cn(
+                      'inline-flex h-6 min-w-9 items-center justify-center rounded-sm px-1 text-[11px] font-semibold',
+                      hasOffers ? 'bg-primary-soft text-primary' : 'bg-muted text-muted-foreground'
+                    )}
                   >
                     {b.short}
                   </span>
                 </span>
-                <span className="mt-2 block text-sm font-medium leading-snug text-foreground">{b.name}</span>
+                <span className={cn('mt-2 block text-sm font-medium leading-snug', hasOffers ? 'text-foreground' : 'text-muted-foreground')}>
+                  {b.name}
+                </span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">
                   {b.count === undefined
-                    ? ' '
+                    ? '\u00a0'
                     : b.count > 0
                       ? t('bank.activeOffers', { count: b.count })
                       : t('bank.noActive')}
@@ -125,12 +128,12 @@ export function HomePage() {
                 {hasOffers ? (
                   <Link
                     href={`/explore?bank=${b.code}`}
-                    className="block h-full rounded-lg border bg-card p-3 transition-colors hover:border-primary/40"
+                    className="block h-full rounded-xl border bg-card p-3 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
                   >
                     {body}
                   </Link>
                 ) : (
-                  <div className={cn('h-full rounded-lg border border-dashed bg-surface p-3')}>{body}</div>
+                  <div className="h-full rounded-xl border border-dashed bg-surface/50 p-3 opacity-70">{body}</div>
                 )}
               </li>
             )
@@ -150,7 +153,7 @@ export function HomePage() {
         href="/explore"
       />
 
-      <section aria-labelledby="guide-heading" className="space-y-4 rounded-lg border bg-surface p-5 sm:p-6">
+      <section aria-labelledby="guide-heading" className="space-y-4 rounded-xl border bg-surface p-5 sm:p-6">
         <h2 id="guide-heading" className="text-lg font-semibold tracking-tight">
           {t('home.guide.title')}
         </h2>
