@@ -1,17 +1,17 @@
 'use client'
 
-import { MapPin, List, Map as MapIcon, Crosshair, Search } from 'lucide-react'
+import { MapPin, List, Map as MapIcon, Crosshair } from 'lucide-react'
 import { useState, useEffect, Suspense } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { OfferGridSkeleton } from '@/components/shared/skeletons'
+import { OfferListSkeleton } from '@/components/shared/skeletons'
 import { ErrorState } from '@/components/shared/error-state'
 import { EmptyState } from '@/components/shared/empty-state'
 import { BankBadge } from '@/components/shared/bank-badge'
 import { DiscountLabel } from '@/components/shared/discount-badge'
+import { SearchInput } from '@/components/shared/search-input'
 import { useI18n } from '@/i18n'
 import { useLocation } from '@/hooks/use-location'
 import { fetchNearbyOffers } from '@/services/api/offers'
@@ -60,6 +60,7 @@ export function NearbyPage() {
   const activeLocation = gpsActive ? gpsLocation : { lat: selectedCity.lat, lng: selectedCity.lng }
   const place = gpsActive ? t('nearby.yourLocation') : selectedCity.name
   const { lat, lng } = activeLocation
+  const pinned = offers.filter((o) => hasConfirmedBranch(o)).length
 
   useEffect(() => {
     const controller = new AbortController()
@@ -92,15 +93,23 @@ export function NearbyPage() {
     requestLocation()
   }
 
+  const results = loading ? (
+    <OfferListSkeleton />
+  ) : error ? (
+    <ErrorState onRetry={() => setNonce((n) => n + 1)} />
+  ) : offers.length === 0 ? (
+    <EmptyState title={t('nearby.noNearby')} hint={t('nearby.emptyHint')} />
+  ) : null
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mx-auto max-w-6xl px-4 py-6 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500 lg:py-8">
+      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">{t('nearby.title')}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t('nearby.subtitle', { place })}</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">{t('nearby.title')}</h1>
+          <p className="mt-1 text-sm text-pretty text-muted-foreground">{t('nearby.subtitle', { place })}</p>
         </div>
 
-        <div className="flex shrink-0 gap-1 rounded-lg border bg-card p-0.5" role="group">
+        <div className="flex shrink-0 gap-1 self-start rounded-full border bg-card p-1 shadow-sm" role="group" aria-label={t('nearby.title')}>
           {(['list', 'map'] as const).map((v) => (
             <Button
               key={v}
@@ -108,7 +117,7 @@ export function NearbyPage() {
               size="sm"
               onClick={() => setView(v)}
               aria-pressed={view === v}
-              className="h-8 gap-1.5"
+              className="h-8 gap-1.5 rounded-full"
             >
               {v === 'list' ? (
                 <List className="size-3.5" aria-hidden="true" />
@@ -121,14 +130,14 @@ export function NearbyPage() {
         </div>
       </div>
 
-      <section aria-label={t('nearby.title')} className="mb-6 space-y-4 rounded-lg border bg-card p-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
+      <section aria-label={t('nearby.title')} className="mb-6 space-y-4 rounded-2xl border bg-card p-4 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Button
               variant={gpsActive ? 'default' : 'outline'}
               size="sm"
               onClick={handleUseGps}
-              className="gap-1.5"
+              className="gap-1.5 rounded-full"
             >
               <Crosshair className="size-3.5" aria-hidden="true" />
               {permission === 'requesting' ? t('nearby.requesting') : t('nearby.gps')}
@@ -146,7 +155,7 @@ export function NearbyPage() {
                     setUseGps(false)
                     setSelectedCity(city)
                   }}
-                  className={cn(active && 'border font-semibold')}
+                  className={cn('rounded-full', active && 'border font-semibold')}
                 >
                   {city.name}
                 </Button>
@@ -156,7 +165,7 @@ export function NearbyPage() {
 
           <div className="flex items-center gap-2">
             <span className="text-xs whitespace-nowrap text-muted-foreground">{t('nearby.radius')}</span>
-            <div className="flex gap-1">
+            <div className="flex gap-1" role="group" aria-label={t('nearby.radius')}>
               {RADIUS_OPTIONS.map((r) => (
                 <Button
                   key={r}
@@ -164,7 +173,7 @@ export function NearbyPage() {
                   size="sm"
                   aria-pressed={radius === r}
                   onClick={() => setRadius(r)}
-                  className="h-8 px-2.5 text-xs"
+                  className="h-8 rounded-full px-2.5 text-xs"
                 >
                   {r} km
                 </Button>
@@ -174,56 +183,69 @@ export function NearbyPage() {
         </div>
 
         {useGps && permission === 'denied' && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {t('nearby.denied')}
           </p>
         )}
         {useGps && permission === 'unavailable' && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {t('nearby.unavailable')}
           </p>
         )}
 
-        <div className="relative">
-          <Search
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <Input
-            type="search"
-            placeholder={t('nearby.filterPlaceholder')}
-            aria-label={t('nearby.filterPlaceholder')}
-            value={searchFilter}
-            onChange={(e) => setSearchFilter(e.target.value)}
-            className="h-9 pl-9"
-          />
-        </div>
-        <p className="text-xs text-muted-foreground">{t('nearby.permissionHint')}</p>
+        <SearchInput
+          value={searchFilter}
+          onChange={setSearchFilter}
+          placeholder={t('nearby.filterPlaceholder')}
+          ariaLabel={t('nearby.filterPlaceholder')}
+        />
+        <p className="text-xs text-pretty text-muted-foreground">{t('nearby.permissionHint')}</p>
       </section>
 
-      {loading ? (
-        <OfferGridSkeleton />
-      ) : error ? (
-        <ErrorState onRetry={() => setNonce((n) => n + 1)} />
-      ) : offers.length === 0 ? (
-        <EmptyState title={t('nearby.noNearby')} hint={t('nearby.emptyHint')} />
+      {results ? (
+        results
       ) : view === 'map' ? (
-        <div className="h-[32rem] overflow-hidden rounded-lg border">
-          <Suspense
-            fallback={
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                {t('common.loading')}
-              </div>
-            }
-          >
-            <OfferMap
-              offers={offers}
-              userLocation={activeLocation}
-              className="h-full w-full"
-              selectedOfferId={selectedOfferId}
-              onSelectOffer={setSelectedOfferId}
-            />
-          </Suspense>
+        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+          <div className="order-2 min-w-0 space-y-3 lg:order-1 lg:max-h-[36rem] lg:overflow-y-auto lg:pr-1">
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+              {t('nearby.found', { count: offers.length, radius })}
+              {' · '}
+              {t('nearby.mapCount', { count: pinned })}
+            </p>
+            <ul className="space-y-3">
+              {offers.map((offer) => (
+                <li key={offer.id}>
+                  <NearbyOfferRow
+                    offer={offer}
+                    selected={selectedOfferId === offer.id}
+                    onShowOnMap={
+                      hasConfirmedBranch(offer)
+                        ? () => setSelectedOfferId(offer.id)
+                        : undefined
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+            <p className="pt-1 text-xs text-pretty text-muted-foreground">{t('nearby.approxNote')}</p>
+          </div>
+          <div className="order-1 h-80 min-w-0 overflow-hidden rounded-2xl border shadow-sm lg:order-2 lg:h-[36rem]">
+            <Suspense
+              fallback={
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  {t('common.loading')}
+                </div>
+              }
+            >
+              <OfferMap
+                offers={offers}
+                userLocation={activeLocation}
+                className="h-full w-full"
+                selectedOfferId={selectedOfferId}
+                onSelectOffer={setSelectedOfferId}
+              />
+            </Suspense>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
@@ -237,14 +259,22 @@ export function NearbyPage() {
               </li>
             ))}
           </ul>
-          <p className="pt-2 text-xs text-muted-foreground">{t('nearby.approxNote')}</p>
+          <p className="pt-2 text-xs text-pretty text-muted-foreground">{t('nearby.approxNote')}</p>
         </div>
       )}
     </div>
   )
 }
 
-function NearbyOfferRow({ offer }: { offer: Offer }) {
+function NearbyOfferRow({
+  offer,
+  selected = false,
+  onShowOnMap,
+}: {
+  offer: Offer
+  selected?: boolean
+  onShowOnMap?: () => void
+}) {
   const { t } = useI18n()
   const merchant = getMerchantName(offer)
   const branch = offer.matched_branch_name || offer.geo_locations?.[0]?.name
@@ -256,17 +286,27 @@ function NearbyOfferRow({ offer }: { offer: Offer }) {
     offer.distance_km !== undefined && offer.distance_km !== null && hasConfirmedBranch(offer)
 
   return (
-    <article className="grid grid-cols-[1fr_auto] items-start gap-x-3 gap-y-2 rounded-lg border bg-card p-4 transition-colors hover:border-primary/40">
+    <article
+      data-selected={selected ? 'true' : undefined}
+      className={cn(
+        'grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 rounded-xl border bg-card p-4 shadow-sm transition-colors',
+        selected ? 'border-primary ring-2 ring-primary/25' : 'hover:border-primary/40'
+      )}
+    >
       <div className="min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <h3 className="min-w-0 truncate text-base font-semibold">{merchant}</h3>
+          <h3 className="min-w-0 text-base font-semibold">{merchant}</h3>
           {offer.bank && <BankBadge bankName={offer.bank} />}
         </div>
         <p className="line-clamp-2 text-sm text-muted-foreground">{decodeHtmlEntities(offer.title)}</p>
         {areaOnly ? (
           <p className="flex items-start gap-1 text-xs text-muted-foreground">
             <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-            <span className="min-w-0 break-words">{t('location.areaOnly', { area: areaOnly })}</span>
+            <span className="min-w-0 break-words">
+              {t('location.areaOnly', { area: areaOnly })}
+              {' · '}
+              {t('nearby.notOnMap')}
+            </span>
           </p>
         ) : (branch || address) && (
           <p className="flex items-start gap-1 text-xs text-muted-foreground">
@@ -276,7 +316,7 @@ function NearbyOfferRow({ offer }: { offer: Offer }) {
             </span>
           </p>
         )}
-        <DiscountLabel offer={offer} className="pt-1 text-base" />
+        <DiscountLabel offer={offer} size="sm" className="pt-1 text-base" />
       </div>
 
       <div className="flex flex-col items-end gap-2">
@@ -285,7 +325,12 @@ function NearbyOfferRow({ offer }: { offer: Offer }) {
             {formatDistance(offer.distance_km as number)}
           </span>
         )}
-        <Button variant="outline" size="sm" asChild>
+        {onShowOnMap && (
+          <Button variant={selected ? 'default' : 'outline'} size="sm" onClick={onShowOnMap} aria-pressed={selected} className="rounded-full">
+            {t('nearby.showOnMap')}
+          </Button>
+        )}
+        <Button variant="outline" size="sm" className="rounded-full" asChild>
           <Link href={`/offers/${offer.id}`}>{t('offer.viewOffer')}</Link>
         </Button>
       </div>

@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
-import { Search, ArrowLeft, ChevronRight, Store } from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
+import { Search, ArrowLeft, ChevronRight, Store, X } from 'lucide-react'
 import { useMemo, useState, useEffect } from 'react'
 
 import { Input } from '@/components/ui/input'
@@ -38,51 +38,51 @@ export function MerchantsPage() {
     )
   }, [merchants, search])
 
-  if (loading) {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-6">
-        <h1 className="mb-6 text-xl font-bold tracking-tight">{t('merchants.title')}</h1>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Card key={i} className="h-28 animate-pulse bg-muted/50" />
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-6">
-        <h1 className="mb-6 text-xl font-bold tracking-tight">{t('merchants.title')}</h1>
-        <ErrorState onRetry={() => window.location.reload()} />
-      </div>
-    )
-  }
-
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
-      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('merchants.title')}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t('merchants.subtitle', { count: merchants.length })}
-          </p>
-        </div>
+    <div className="mx-auto max-w-6xl px-4 py-6 motion-safe:animate-in motion-safe:fade-in lg:py-8">
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t('merchants.title')}</h1>
+        <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
+          {loading
+            ? t('common.loading')
+            : search
+              ? t('merchants.filtered', { count: filtered.length, total: merchants.length })
+              : t('merchants.subtitle', { count: merchants.length })}
+        </p>
       </div>
 
-      <div className="relative mb-6 max-w-md">
-        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="relative mb-6 max-w-md" role="search">
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
         <Input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t('merchants.searchPlaceholder')}
-          className="pl-9"
+          aria-label={t('merchants.searchPlaceholder')}
+          className="h-11 rounded-xl bg-card pr-10 pl-9"
         />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch('')}
+            className="absolute top-1/2 right-2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+            aria-label={t('search.clear')}
+          >
+            <X className="size-4" />
+          </button>
+        )}
       </div>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-busy="true">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Card key={i} className="h-28 animate-pulse bg-muted/40" />
+          ))}
+        </div>
+      ) : error ? (
+        <ErrorState onRetry={() => window.location.reload()} />
+      ) : filtered.length === 0 ? (
+
         <EmptyState title={t('merchants.noResults')} />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -100,8 +100,8 @@ function MerchantCard({ merchant }: { merchant: Merchant }) {
   const slug = merchant.canonical_merchant || merchant.name
 
   return (
-    <Link href={`/merchants/${encodeURIComponent(slug)}`}>
-      <Card className="group flex flex-col justify-between p-4 h-full transition-all duration-200 hover:shadow-md hover:border-primary/40">
+    <Link href={`/merchants/${encodeURIComponent(slug)}`} className="block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <Card className="group flex h-full flex-col justify-between p-4 shadow-sm transition duration-200 hover:border-primary/40 motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-md">
         <div className="flex items-start gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Store className="size-5" />
@@ -140,6 +140,7 @@ export function MerchantDetailPage({ params }: { params?: { merchant?: string } 
   const routerParams = useParams<{ merchant?: string }>()
   const merchantSlug = params?.merchant ?? routerParams?.merchant
   const { t } = useI18n()
+  const router = useRouter()
   const decoded = decodeURIComponent(merchantSlug || '')
 
   const [merchantInfo, setMerchantInfo] = useState<Merchant | null>(null)
@@ -163,7 +164,7 @@ export function MerchantDetailPage({ params }: { params?: { merchant?: string } 
   }, [decoded])
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="mx-auto max-w-6xl px-4 py-6 motion-safe:animate-in motion-safe:fade-in lg:py-8">
       <Button variant="ghost" size="sm" asChild className="mb-4">
         <Link href="/merchants">
           <ArrowLeft className="size-4" />
@@ -172,7 +173,7 @@ export function MerchantDetailPage({ params }: { params?: { merchant?: string } 
       </Button>
 
       {/* Merchant Header Hero */}
-      <div className="mb-8 rounded-xl border bg-card p-6 shadow-sm">
+      <div className="mb-8 rounded-2xl border bg-card p-6 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -190,7 +191,7 @@ export function MerchantDetailPage({ params }: { params?: { merchant?: string } 
                 )}
                 {merchantInfo?.aliases && merchantInfo.aliases.length > 0 && (
                   <span className="text-xs text-muted-foreground">
-                    Also known as: {merchantInfo.aliases.slice(0, 2).join(', ')}
+                    {t('merchants.alsoKnown', { names: merchantInfo.aliases.slice(0, 2).join(', ') })}
                   </span>
                 )}
               </div>
@@ -198,8 +199,8 @@ export function MerchantDetailPage({ params }: { params?: { merchant?: string } 
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className="text-xs px-3 py-1 font-medium bg-muted/40">
-              {loading ? '…' : total} {total === 1 ? 'Active Offer' : 'Active Offers'}
+            <Badge variant="outline" className="bg-muted/40 px-3 py-1 text-xs font-medium">
+              {loading ? t('common.loading') : t('merchants.activeOffers', { count: total })}
             </Badge>
           </div>
         </div>
@@ -207,7 +208,7 @@ export function MerchantDetailPage({ params }: { params?: { merchant?: string } 
         {/* Participating banks */}
         {merchantInfo?.banks && merchantInfo.banks.length > 0 && (
           <div className="mt-4 pt-4 border-t flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">Available with cards from:</span>
+            <span className="text-xs font-medium text-muted-foreground">{t('merchants.availableWith')}</span>
             {merchantInfo.banks.map((b) => (
               <BankBadge key={b} bankName={b} />
             ))}
@@ -227,8 +228,8 @@ export function MerchantDetailPage({ params }: { params?: { merchant?: string } 
         <EmptyState
           title={t('search.noResults')}
           hint={t('search.noResultsHint')}
-          actionLabel="Browse all merchants"
-          onAction={() => window.location.href = '/merchants'}
+          actionLabel={t('merchants.browseAll')}
+          onAction={() => router.push('/merchants')}
         />
       ) : (
         <>

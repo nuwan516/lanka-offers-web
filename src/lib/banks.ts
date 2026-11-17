@@ -34,3 +34,11 @@ export function getBankName(codeOrName?: string | null): string {
   if (!codeOrName) return ''
   return getBankInfo(codeOrName)?.name ?? codeOrName
 }
+
+/** Stable 0–7 tint for a monogram. Not an official bank colour. */
+export function bankTone(codeOrName?: string | null): number {
+  const key = (getBankInfo(codeOrName)?.code ?? codeOrName ?? '').toLowerCase()
+  let n = 0
+  for (const ch of key) n = (n + ch.charCodeAt(0)) % 8
+  return n
+}

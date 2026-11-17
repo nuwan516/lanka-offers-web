@@ -7,7 +7,7 @@ import type { Offer } from '@/types'
 
 interface DiscountLabelProps {
   offer: Offer
-  size?: 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg'
   className?: string
 }
 
@@ -28,7 +28,7 @@ export function DiscountLabel({ offer, size = 'md', className }: DiscountLabelPr
     <p
       className={cn(
         'font-semibold tracking-tight text-primary',
-        size === 'lg' ? 'text-3xl' : 'text-xl',
+        size === 'lg' ? 'text-3xl' : size === 'sm' ? 'text-sm' : 'text-xl',
         className
       )}
     >

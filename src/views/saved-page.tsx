@@ -48,46 +48,32 @@ export function SavedPage() {
     return () => controller.abort()
   }, [idsKey, nonce])
 
-  if (loading) {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-6">
-        <h1 className="mb-6 text-xl font-bold tracking-tight">{t('saved.title')}</h1>
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-6 motion-safe:animate-in motion-safe:fade-in lg:py-8">
+      <div className="mb-6 space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t('saved.title')}</h1>
+        <p className="text-sm text-muted-foreground">
+          {loading ? t('common.loading') : savedOffers.length > 0 ? t('saved.onDevice', { count: savedOffers.length }) : t('saved.localNote')}
+        </p>
+      </div>
+      {loading ? (
         <OfferGridSkeleton />
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-6">
-        <h1 className="mb-6 text-xl font-bold tracking-tight">{t('saved.title')}</h1>
+      ) : error ? (
         <ErrorState onRetry={refetch} />
-      </div>
-    )
-  }
-
-  if (savedOffers.length === 0) {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-6">
-        <h1 className="mb-6 text-xl font-bold tracking-tight">{t('saved.title')}</h1>
+      ) : savedOffers.length === 0 ? (
         <EmptyState
           title={t('saved.empty')}
           hint={t('saved.emptyHint')}
           actionLabel={t('saved.explore')}
           onAction={() => router.push('/explore')}
         />
-      </div>
-    )
-  }
-
-  return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
-      <h1 className="mb-6 text-xl font-bold tracking-tight">{t('saved.title')}</h1>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {savedOffers.map((offer) => (
-          <OfferCard key={offer.id} offer={offer} />
-        ))}
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {savedOffers.map((offer) => (
+            <OfferCard key={offer.id} offer={offer} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

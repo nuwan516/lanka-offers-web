@@ -50,5 +50,5 @@ npm run dev
 ## Known limitations
 
 - No bank logos: none are licensed in this repo, so banks are identified by name and monogram.
-- Sinhala/Tamil strings added in the redesign (see recent `si.json`/`ta.json` changes) need native-speaker review.
+- Sinhala/Tamil strings added in the redesign, including the latest UI pass (`home.eyebrow`, `search.searching`, `filters.showResults`, `filters.sheetHint`, `filters.remove`, `location.onlineShort`, `location.nationwideShort`, `nearby.mapLabel`, `nearby.showOnMap`, `nearby.mapCount`, `nearby.notOnMap`, `offer.branchOne`, `offer.branchMany`, `offer.outletNotes`, `offer.contact`, `offer.participatingOutlets`, `offer.openInMaps`, `offer.redeemOnline`, `merchants.alsoKnown`, `merchants.availableWith`, `merchants.browseAll`, `merchants.filtered`, `saved.onDevice`, `saved.localNote`, `footer.privacy`, `notFound.title`, `notFound.body`, `notFound.home`, `nav.breadcrumb`), need native-speaker review.
 - Accessibility is checked structurally (landmarks, skip link, current-page state); no automated contrast or screen-reader audit has been run.

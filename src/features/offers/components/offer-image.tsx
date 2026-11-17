@@ -14,8 +14,11 @@ interface OfferImageProps {
 
 function resolveImageUrl(value?: string | null): string | null {
   if (!value) return null
+  // Root-relative paths use the same-origin /api rewrite, which is the default setup.
+  if (value.startsWith('/') && !value.startsWith('//')) return value
   try {
-    const resolved = new URL(value, `${API_BASE_URL.replace(/\/$/, '')}/`)
+    const base = API_BASE_URL ? `${API_BASE_URL.replace(/\/$/, '')}/` : undefined
+    const resolved = base ? new URL(value, base) : new URL(value)
     return resolved.protocol === 'http:' || resolved.protocol === 'https:' ? resolved.toString() : null
   } catch {
     return null
